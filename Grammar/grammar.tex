@@ -12,20 +12,20 @@
 \begin{grammar}
 <game> ::= <roundList> `played by' <teamList>
 
-<teamList> ::= <team> \{`,' <team>\} | <playerList> | `randomly divide' 
-<playerList> `into' <nameList>
+<teamList> ::= (<team> \{`,' <team>\} | <playerList> | `randomly divide' 
+<playerList> `into' <nameList>) [`all' <attributeList>]
 
 <team> ::= `team' <name> <playerList>
 
 <playerList> ::= <player> \{`;' <player>\}
 
-<player> ::= <name> <attributeList> 
+<player> ::= <name> <attributeList>
 
 <attributeList> ::= <attribute> \{`,' <attribute>\}
 
 <attribute> ::= <affiliation> | <score> | <resource>
 
-<affiliation> ::= 'affiliated with' <name> 
+<affiliation> ::= 'affiliated with' <name>
 
 <score> ::= `score' <name> <number> 
 
@@ -33,32 +33,58 @@
 
 <roundList> ::= <round> \{`;' <round>\} [<modifierList>]
 
+<modifierList> ::= <modifier> \{`,' <modifier>\}
+
+<modifier> ::= <roundReference> (`before' | `after') <phaseReference> `insert' 
+<phase>
+
+<roundReference> ::= `round' <number>
+
+<phaseReference> ::= `phase' <number>
+
 <round> ::= <phase> \{`,' <phase>\} [`repeated' <number> `times']
 
 <phase> ::= <action> | <progression>
 
 <action> ::= <competition> | <decision>
 
-<competition> ::= [`scored' | `placed'] `competition between' <idList>
+<competition> ::= [`scored' | `placed'] [`team'] `competition between' <idList>
 
-<decision> ::= `vote by' <idList> `between' <idList> | 'nomination of' <number> 
-`of' <idList> `by' <identifier> | `allocate' | `binary' %allocate resources, 
+<decision> ::= `vote by' <idList> `between' <idList> [`tiebroken by' 
+<decision>] | 'nomination of' <number> 
+`of' <idList> `by' <identifier> | `allocate' <resource> | `binary' %allocate 
+%resources, 
 %binary is for yes/no, up/down type decisions.
 
-<progression> ::= `update' <identifier> <attribute> `to' <value>
+<progression> ::= (<affiliationUpdate> | <scoreUpdate>  | <resourceUpdate>) 
+`for' <idList>
+
+<affiliationUpdate> ::= `elimination' | (`add' | `remove') <affiliation> | 
+[`evenly' | `number preserving'] `swap' <affiliationList> [`adding' 
+<affiliationList>] | `change' <affiliation> `to' <affiliation>
+
+<scoreUpdate> ::= (`increase' | `decrease') <score> `by' (<number> | 
+<resultReference>) | `reset' <score>
+
+<resourceUpdate> ::= (`gain' | `expend') <number> <resource> 
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
-<identifier> ::= `everyone' | <name> | <name> | <reference> | `chance' %name | 
-%affiliation
+<identifier> ::= `everyone' | <name> | <affiliation> | <idReference> | `chance' 
 
-<reference> ::= `winner' | `loser' | `voted'
+<idReference> ::= <compReference> (`winner' | `loser') | <voteReference> 
+(`majority' | `minority') `voted' | <allocationReference> `amount'
 
-<value> ::= <name> | <number>
+<compReference> ::= `competition' <number>
 
-<name> ::= [a-zA-Z] {[a-zA-Z0-9 ]}
+<voteReference> ::= `vote' <number>
 
-<value> ::= [0-9]+
+<allocationReference> ::= `allocation' <number>
+
+<name> ::= (`a' | ... | `z' | `A' | ... | `Z') \{`a' | ... | `z' | `A' | ... | 
+`Z' | `0' | ... | `9'\}
+
+<number> ::= (`0' | ... | `9')+
 
 \end{grammar}
 
@@ -67,18 +93,17 @@ Notes:
 \begin{itemize}
 	\item Allow for random decisions
 	\item Vote tiebreakers?
-	\item Players - mandatory attributes? just affiliation? affiliation, score, 
-	resources, only included if used?
 	\item Win condition or update affiliation to winner for someone in last 
 	round? Have a progression shortcut for win?
-	\item index challenge/votes/phases or name them with identifiers?
-	\item shortcuts for repeating a round, inserting a modifier into a complete 
-	set of rounds
 	\item make grammar unambiguous
 	\item multiple votes? 
 	\item I've restricted player attributes into 3 categories, with no 
 	opportunity for customization outside those three. Am I okay with this?
-	\item modifiers for player lists? i.e. every player starts out with a vote 
-	resource of 20
+	\item affiliation used everywhere, get syntax right
+	\item score/resource include init number... maybe need separate 
+	non-terminals for initializing attributes and referencing/updating 
+	attributes
+	\item should allocate be a decision and progression or just progression? 
+	Probably just progression.
 \end{itemize}
 \end{document}
