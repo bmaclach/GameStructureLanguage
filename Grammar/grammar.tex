@@ -1,0 +1,56 @@
+\documentclass{article}
+\usepackage[rounded]{syntax}
+\usepackage{url}
+
+\title{Grammar for Language Describing Game Structures}
+\author{Brooks MacLachlan}
+
+\begin{document}
+\maketitle
+
+\noindent \textbf{Pretty-printed EBNF grammar:}
+\begin{grammar}
+<game> ::= <round> \{`,' <round>\} `played by' <player> \{`,' <player>\}
+
+<round> ::= <phase> \{`,' <phase>\}
+
+<phase> ::= <action> | <progression>
+
+<action> ::= <competition> | <decision>
+
+<competition> ::= [`scored' | `placed'] `competition between' <idList>
+
+<decision> ::= `vote by' <idList> `between' <idList> | 'nomination of' <number> 
+`of' <idList> `by' <identifier> %nomination acheivable just by vote...
+
+<progression> ::= `update' <identifier> <attribute> `to' <value>
+
+<player> ::= <name> <name> <number> \{<name> <value>\} %name affiliation score 
+%custom attributes
+
+<idList> ::= <identifier> \{<identifier>\} [`except' <idList>]
+
+<identifier> ::= `everyone' | <name> | <name> | <reference> | `chance' %name | 
+%affiliation
+
+<reference> ::= `winner' | 'voted'
+
+<value> ::= <name> | <number>
+
+<name> ::= [a-zA-Z] {[a-zA-Z0-9 ]}
+
+<value> ::= [0-9]+
+
+\end{grammar}
+
+
+Notes:
+\begin{itemize}
+	\item Allow for random decisions
+	\item Vote tiebreakers?
+	\item Players - mandatory attributes? just affiliation?
+	\item Win condition or update affiliation to winner for someone in last 
+	round? Have a progression shortcut for win?
+	\item index challenge/votes/phases or name them with identifiers?
+\end{itemize}
+\end{document}
