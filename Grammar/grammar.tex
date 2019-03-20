@@ -10,7 +10,7 @@
 
 \noindent \textbf{Pretty-printed EBNF grammar:}
 \begin{grammar}
-<game> ::= <roundList> `played by' <teamList>
+<game> ::= <roundList> `played by' <teamList> `wonBy' <winConditionList>
 
 <teamList> ::= (<team> \{`,' <team>\} | <playerList> | `randomly divide' 
 <playerList> `into' <nameList>) [`all' <attributeList>]
@@ -23,13 +23,13 @@
 
 <attributeList> ::= <attribute> \{`,' <attribute>\}
 
-<attribute> ::= <affiliation> | <score> | <resource>
+<attribute> ::= <affiliation> | <score> [<number>] | <resource> [<number>]
 
 <affiliation> ::= 'affiliated with' <name>
 
-<score> ::= `score' <name> <number> 
+<score> ::= `score' <name>
 
-<resource> ::= `resource' <name> <number>
+<resource> ::= `resource' <name>
 
 <roundList> ::= <round> \{`;' <round>\} [<modifierList>]
 
@@ -48,13 +48,14 @@
 
 <action> ::= <competition> | <decision>
 
-<competition> ::= [`scored' | `placed'] [`team'] `competition between' <idList>
+<competition> ::= [`scored' | `placed'] [`team'] `competition between' <idList> 
+%optional scored placed because will default to placed?
 
-<decision> ::= `vote by' <idList> `between' <idList> [`tiebroken by' 
-<decision>] | 'nomination of' <number> 
-`of' <idList> `by' <identifier> | `allocate' <resource> | `binary' %allocate 
-%resources, 
-%binary is for yes/no, up/down type decisions.
+<decision> ::= [`self-included'] `vote by' <idList> `between' <idList> 
+[`tiebroken by' 
+(<decision> | <competition>)] | [`self-included'] `nomination of' <number> 
+`of' <idList> `by' <identifier> | `allocate' <resource> | `binary' %for yes/no, 
+%up/down type decisions.
 
 <progression> ::= (<affiliationUpdate> | <scoreUpdate>  | <resourceUpdate>) 
 `for' <idList>
@@ -63,19 +64,27 @@
 [`evenly' | `number preserving'] `swap' <affiliationList> [`adding' 
 <affiliationList>] | `change' <affiliation> `to' <affiliation>
 
-<scoreUpdate> ::= (`increase' | `decrease') <score> `by' (<number> | 
-<resultReference>) | `reset' <score>
+<scoreUpdate> ::= (`increase' | `decrease') <score> `by' <earning> | `set' 
+<score> `to' <earning> 
 
-<resourceUpdate> ::= (`gain' | `expend') <number> <resource> 
+<resourceUpdate> ::= (`gain' | `expend') <earning> <resource> | `set' 
+<resource> `to' <earning> 
+
+<earning> ::= <number> | <resultReference> | <allocateReference>
+
+<resultReference> ::= `scored competition' <number> 
+
+<allocateReference> ::= `allocation' <number> `amount'
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
-<identifier> ::= `everyone' | <name> | <affiliation> | <idReference> | `chance' 
+<identifier> ::= (`everyone' | <name> | <affiliation> | <idReference> | 
+`chance') [`*' <earning>]
 
 <idReference> ::= <compReference> (`winner' | `loser') | <voteReference> 
-(`majority' | `minority') `voted' | <allocationReference> `amount'
+(`majority' | `minority') `voted' 
 
-<compReference> ::= `competition' <number>
+<compReference> ::= `placed competition' <number>
 
 <voteReference> ::= `vote' <number>
 
@@ -86,24 +95,27 @@
 
 <number> ::= (`0' | ... | `9')+
 
+<winCondition> ::= (<score> | <resource>) `hits' <number> | `final competition' 
+| (`highest' | `lowest') (<score> | <resource>) | <number> `member jury vote'
+
+<winConditionList> ::= <winCondition> \{`,' <winCondition>\}
+
 \end{grammar}
 
 ~\newline
 Notes:
 \begin{itemize}
-	\item Allow for random decisions
-	\item Vote tiebreakers?
-	\item Win condition or update affiliation to winner for someone in last 
-	round? Have a progression shortcut for win?
 	\item make grammar unambiguous
-	\item multiple votes? 
+	\item Potentially include "directed vote" type of decision where a player 
+	chooses another player as well as a direction (i.e. move that player ahead 
+	or backwards)
 	\item I've restricted player attributes into 3 categories, with no 
 	opportunity for customization outside those three. Am I okay with this?
 	\item affiliation used everywhere, get syntax right
-	\item score/resource include init number... maybe need separate 
-	non-terminals for initializing attributes and referencing/updating 
-	attributes
 	\item should allocate be a decision and progression or just progression? 
-	Probably just progression.
+	Both, but decision will automatically also do the progression. The 
+	progression exists for non-decision related resource updates, such as 
+	awarding a player more of a resource for winning a competition.
+	\item combine score and resource?
 \end{itemize}
 \end{document}
