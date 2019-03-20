@@ -10,9 +10,30 @@
 
 \noindent \textbf{Pretty-printed EBNF grammar:}
 \begin{grammar}
-<game> ::= <round> \{`,' <round>\} `played by' <player> \{`,' <player>\}
+<game> ::= <roundList> `played by' <teamList>
 
-<round> ::= <phase> \{`,' <phase>\}
+<teamList> ::= <team> \{`,' <team>\} | <playerList> | `randomly divide' 
+<playerList> `into' <nameList>
+
+<team> ::= `team' <name> <playerList>
+
+<playerList> ::= <player> \{`;' <player>\}
+
+<player> ::= <name> <attributeList> 
+
+<attributeList> ::= <attribute> \{`,' <attribute>\}
+
+<attribute> ::= <affiliation> | <score> | <resource>
+
+<affiliation> ::= 'affiliated with' <name> 
+
+<score> ::= `score' <name> <number> 
+
+<resource> ::= `resource' <name> <number>
+
+<roundList> ::= <round> \{`;' <round>\} [<modifierList>]
+
+<round> ::= <phase> \{`,' <phase>\} [`repeated' <number> `times']
 
 <phase> ::= <action> | <progression>
 
@@ -21,19 +42,17 @@
 <competition> ::= [`scored' | `placed'] `competition between' <idList>
 
 <decision> ::= `vote by' <idList> `between' <idList> | 'nomination of' <number> 
-`of' <idList> `by' <identifier> %nomination acheivable just by vote...
+`of' <idList> `by' <identifier> | `allocate' | `binary' %allocate resources, 
+%binary is for yes/no, up/down type decisions.
 
 <progression> ::= `update' <identifier> <attribute> `to' <value>
 
-<player> ::= <name> <name> <number> \{<name> <value>\} %name affiliation score 
-%custom attributes
-
-<idList> ::= <identifier> \{<identifier>\} [`except' <idList>]
+<idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
 <identifier> ::= `everyone' | <name> | <name> | <reference> | `chance' %name | 
 %affiliation
 
-<reference> ::= `winner' | 'voted'
+<reference> ::= `winner' | `loser' | `voted'
 
 <value> ::= <name> | <number>
 
@@ -43,14 +62,23 @@
 
 \end{grammar}
 
-
+~\newline
 Notes:
 \begin{itemize}
 	\item Allow for random decisions
 	\item Vote tiebreakers?
-	\item Players - mandatory attributes? just affiliation?
+	\item Players - mandatory attributes? just affiliation? affiliation, score, 
+	resources, only included if used?
 	\item Win condition or update affiliation to winner for someone in last 
 	round? Have a progression shortcut for win?
 	\item index challenge/votes/phases or name them with identifiers?
+	\item shortcuts for repeating a round, inserting a modifier into a complete 
+	set of rounds
+	\item make grammar unambiguous
+	\item multiple votes? 
+	\item I've restricted player attributes into 3 categories, with no 
+	opportunity for customization outside those three. Am I okay with this?
+	\item modifiers for player lists? i.e. every player starts out with a vote 
+	resource of 20
 \end{itemize}
 \end{document}
