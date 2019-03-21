@@ -23,9 +23,7 @@
 
 <attributeList> ::= <attribute> \{`,' <attribute>\}
 
-<attribute> ::= <affiliation> | <counter> [<number>]
-
-<affiliation> ::= 'affiliated with' <name>
+<attribute> ::= `affiliated with' <name> | <counter> [<number>]
 
 <counter> ::= (`score' | `resource') <name>
 
@@ -60,10 +58,10 @@
 <progression> ::= (<affiliationUpdate> | <counterUpdate>) 
 `for' <idList>
 
-<affiliationUpdate> ::= `elimination' | (`add' | `remove') <affiliation> | 
-[`evenly' | `number preserving'] `swap' <affiliationList> [`adding' 
-<affiliationList>] | `change' <affiliation> `to' <affiliation> | `merge' 
-<affiliationList> [<affiliation>]
+<affiliationUpdate> ::= `elimination' | (`add' | `remove') <name> | 
+[`evenly' | `number preserving'] `swap' <nameList> [`adding' 
+<nameList>] | `change' <name> `to' <name> | `merge' 
+<nameList> [<name>]
 
 <counterUpdate> ::= (`increase' | `decrease') <counter> `by' <value> | `set' 
 <counter> `to' <value> 
@@ -77,8 +75,8 @@
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
-<identifier> ::= (`everyone' | <name> | <affiliation> | <idReference> | 
-`chance') [`*' <value>]
+<identifier> ::= (`everyone' | <name> | <idReference> | `chance' | `nominated') 
+[`*' <value>]
 
 <idReference> ::= <compReference> (`winner' | `loser') | <voteReference> 
 (`majority' | `minority') `voted' | (`highest' | `lowest' | `most' | `least') 
@@ -90,6 +88,8 @@
 
 <name> ::= (`a' | ... | `z' | `A' | ... | `Z') \{`a' | ... | `z' | `A' | ... | 
 `Z' | `0' | ... | `9'\}
+
+<nameList> ::= <name> \{`,' <name>\}
 
 <number> ::= (`0' | ... | `9')+
 
@@ -104,7 +104,6 @@
 Notes:
 \begin{itemize}
 	\item make grammar unambiguous
-	\item affiliation used everywhere, get syntax right
 	\item should allocate be a decision and progression or just progression? 
 	Both, but decision will automatically also do the progression. The 
 	progression exists for non-decision related resource updates, such as 
