@@ -1,0 +1,4 @@
+Project Plan, 3/3:
+Good topic; include a discussion of related languages or approaches;
+not clear what the generated code would do and how that would be used to
+develop a whole game.
