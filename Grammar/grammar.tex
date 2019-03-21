@@ -38,57 +38,62 @@
 <modifier> ::= <roundReference> (`before' | `after') <phaseReference> `insert' 
 <phase>
 
-<roundReference> ::= `round' <number>
+<roundReference> ::= `round' [<number>]
 
-<phaseReference> ::= `phase' <number>
+<phaseReference> ::= `phase' [<number>]
 
-<round> ::= <phase> \{`,' <phase>\} [`repeated' <number> `times']
+<round> ::= <phaseList> [`repeated' <number> `times']
 
 <phase> ::= <action> | <progression>
 
+<phaseList> ::= <phase> \{`,' <phase>\}
+
 <action> ::= <competition> | <decision>
 
-<competition> ::= [`scored' | `placed'] [`team'] `competition between' <idList> 
-%optional scored placed because will default to placed?
+<competition> ::= [`scored'] [`team'] `competition between' <idList>
 
 <decision> ::= [`self-included'] `vote by' <idList> `between' <idList> 
 [`tiebroken by' 
-(<decision> | <competition>)] | [`self-included'] `nomination of' <number> 
-`of' <idList> `by' <identifier> | `allocate' <resource> | `binary' %for yes/no, 
-%up/down type decisions.
+(<phase>)] | [`self-included'] `nomination of' <number> 
+`of' <idList> `by' <identifier> | `allocate' <resource> | [`self-included'] 
+`directed vote by' <idList> `between' <idList> | `uses?' <identifier> `then' 
+<phaseList> [`otherwise' <phaseList>]
 
 <progression> ::= (<affiliationUpdate> | <scoreUpdate>  | <resourceUpdate>) 
 `for' <idList>
 
 <affiliationUpdate> ::= `elimination' | (`add' | `remove') <affiliation> | 
 [`evenly' | `number preserving'] `swap' <affiliationList> [`adding' 
-<affiliationList>] | `change' <affiliation> `to' <affiliation>
+<affiliationList>] | `change' <affiliation> `to' <affiliation> | `merge' 
+<affiliationList> [<affiliation>]
 
-<scoreUpdate> ::= (`increase' | `decrease') <score> `by' <earning> | `set' 
-<score> `to' <earning> 
+<scoreUpdate> ::= (`increase' | `decrease') <score> `by' <value> | `set' 
+<score> `to' <value> 
 
-<resourceUpdate> ::= (`gain' | `expend') <earning> <resource> | `set' 
-<resource> `to' <earning> 
+<resourceUpdate> ::= (`gain' | `expend') <value> <resource> | `set' 
+<resource> `to' <value> 
 
-<earning> ::= <number> | <resultReference> | <allocateReference>
+<value> ::= <number> | <resultReference> | <allocateReference> | <score> | 
+<resource> | <voteReference>
 
-<resultReference> ::= `scored competition' <number> 
+<resultReference> ::= `scored competition' [<number>] 
 
-<allocateReference> ::= `allocation' <number> `amount'
+<allocateReference> ::= `allocation' [<number>]
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
 <identifier> ::= (`everyone' | <name> | <affiliation> | <idReference> | 
-`chance') [`*' <earning>]
+`chance') [`*' <value>]
 
 <idReference> ::= <compReference> (`winner' | `loser') | <voteReference> 
-(`majority' | `minority') `voted' 
+(`majority' | `minority') `voted' | (`highest' | `lowest') <score> | (`most' | 
+`least') <resource>
 
-<compReference> ::= `placed competition' <number>
+<compReference> ::= `placed competition' [<number>]
 
-<voteReference> ::= `vote' <number>
+<voteReference> ::= `vote' [<number>]
 
-<allocationReference> ::= `allocation' <number>
+<allocationReference> ::= `allocation' [<number>]
 
 <name> ::= (`a' | ... | `z' | `A' | ... | `Z') \{`a' | ... | `z' | `A' | ... | 
 `Z' | `0' | ... | `9'\}
@@ -106,9 +111,6 @@
 Notes:
 \begin{itemize}
 	\item make grammar unambiguous
-	\item Potentially include "directed vote" type of decision where a player 
-	chooses another player as well as a direction (i.e. move that player ahead 
-	or backwards)
 	\item I've restricted player attributes into 3 categories, with no 
 	opportunity for customization outside those three. Am I okay with this?
 	\item affiliation used everywhere, get syntax right
@@ -116,6 +118,7 @@ Notes:
 	Both, but decision will automatically also do the progression. The 
 	progression exists for non-decision related resource updates, such as 
 	awarding a player more of a resource for winning a competition.
-	\item combine score and resource?
+	\item combine score and resource? Implement them the same way, but keep 
+	them separate for nice syntax
 \end{itemize}
 \end{document}
