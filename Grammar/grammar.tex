@@ -23,13 +23,11 @@
 
 <attributeList> ::= <attribute> \{`,' <attribute>\}
 
-<attribute> ::= <affiliation> | <score> [<number>] | <resource> [<number>]
+<attribute> ::= <affiliation> | <counter> [<number>]
 
 <affiliation> ::= 'affiliated with' <name>
 
-<score> ::= `score' <name>
-
-<resource> ::= `resource' <name>
+<counter> ::= (`score' | `resource') <name>
 
 <roundList> ::= <round> \{`;' <round>\} [<modifierList>]
 
@@ -55,11 +53,11 @@
 <decision> ::= [`self-included'] `vote by' <idList> `between' <idList> 
 [`tiebroken by' 
 (<phase>)] | [`self-included'] `nomination of' <number> 
-`of' <idList> `by' <identifier> | `allocate' <resource> | [`self-included'] 
+`of' <idList> `by' <identifier> | `allocate' <counter> | [`self-included'] 
 `directed vote by' <idList> `between' <idList> | `uses?' <identifier> `then' 
 <phaseList> [`otherwise' <phaseList>]
 
-<progression> ::= (<affiliationUpdate> | <scoreUpdate>  | <resourceUpdate>) 
+<progression> ::= (<affiliationUpdate> | <counterUpdate>) 
 `for' <idList>
 
 <affiliationUpdate> ::= `elimination' | (`add' | `remove') <affiliation> | 
@@ -67,16 +65,13 @@
 <affiliationList>] | `change' <affiliation> `to' <affiliation> | `merge' 
 <affiliationList> [<affiliation>]
 
-<scoreUpdate> ::= (`increase' | `decrease') <score> `by' <value> | `set' 
-<score> `to' <value> 
+<counterUpdate> ::= (`increase' | `decrease') <counter> `by' <value> | `set' 
+<counter> `to' <value> 
 
-<resourceUpdate> ::= (`gain' | `expend') <value> <resource> | `set' 
-<resource> `to' <value> 
+<value> ::= <number> | <resultReference> | <allocateReference> | <counter> | 
+<voteReference>
 
-<value> ::= <number> | <resultReference> | <allocateReference> | <score> | 
-<resource> | <voteReference>
-
-<resultReference> ::= `scored competition' [<number>] 
+<compReference> ::= `competition' [<number>] 
 
 <allocateReference> ::= `allocation' [<number>]
 
@@ -86,10 +81,8 @@
 `chance') [`*' <value>]
 
 <idReference> ::= <compReference> (`winner' | `loser') | <voteReference> 
-(`majority' | `minority') `voted' | (`highest' | `lowest') <score> | (`most' | 
-`least') <resource>
-
-<compReference> ::= `placed competition' [<number>]
+(`majority' | `minority') `voted' | (`highest' | `lowest' | `most' | `least') 
+<counter> 
 
 <voteReference> ::= `vote' [<number>]
 
@@ -100,8 +93,8 @@
 
 <number> ::= (`0' | ... | `9')+
 
-<winCondition> ::= (<score> | <resource>) `hits' <number> | `final competition' 
-| (`highest' | `lowest') (<score> | <resource>) | <number> `member jury vote'
+<winCondition> ::= <counter> `hits' <number> | `final competition' | (`highest' 
+| `lowest' | `most' | `least') <counter> | <number> `member jury vote'
 
 <winConditionList> ::= <winCondition> \{`,' <winCondition>\}
 
@@ -111,14 +104,11 @@
 Notes:
 \begin{itemize}
 	\item make grammar unambiguous
-	\item I've restricted player attributes into 3 categories, with no 
-	opportunity for customization outside those three. Am I okay with this?
 	\item affiliation used everywhere, get syntax right
 	\item should allocate be a decision and progression or just progression? 
 	Both, but decision will automatically also do the progression. The 
 	progression exists for non-decision related resource updates, such as 
 	awarding a player more of a resource for winning a competition.
-	\item combine score and resource? Implement them the same way, but keep 
-	them separate for nice syntax
+	\item collapse all types of Ref into one referable non-terminal? 
 \end{itemize}
 \end{document}
