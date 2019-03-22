@@ -1,0 +1,6 @@
+Players:
+team Jays: Jose, Kevin, team Yankees: John, Joe having score points
+Rounds:
+team competition between Jays, Yankees > increase points by competition results for everyone repeated 9 times
+Win:
+team highest points

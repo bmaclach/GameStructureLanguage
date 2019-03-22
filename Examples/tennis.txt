@@ -1,0 +1,6 @@
+Players:
+John, Joe having score 
+Rounds:
+competition between everyone > increase set by 1 for competition winner repeated 7 times 
+Win:
+achieving set of 4

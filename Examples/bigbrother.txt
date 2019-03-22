@@ -1,0 +1,20 @@
+Players:
+Lori, Tanya, Eric, Josh, Chiara, Gerry, Roddy, Marcellas, Amy, Jason, Danielle, Lisa having affiliation with houseguest
+Rounds:
+competition between everyone except HOH
+> change HOH to houseguest
+> add HOH for competition winner
+> nomination of 2 between everyone by HOH
+> competition between nominated, HOH, chance * 3
+> uses? competition winner then (vote by competition winner between nominated
+> nomination of 1 between everyone except competition winner, vote majority
+> remove nominated for vote majority)
+> vote by everyone except HOH, nominated between nominated tiebroken by HOH
+> elimination for vote majority
+repeated 9 times,
+competition between everyone
+> vote by competition winner between everyone
+> elimination for vote majority
+from round 7 replace phase 5 with competition between everyone
+Win:
+7 member jury vote
