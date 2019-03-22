@@ -5,7 +5,7 @@ competition between everyone except HOH
 > change HOH to houseguest
 > add HOH for competition winner
 > nomination of 2 between everyone by HOH
-> competition between nominated, HOH, chance * 3
+> competition between nominated, HOH, random * 3
 > uses? competition winner then (vote by competition winner between nominated
 > nomination of 1 between everyone except competition winner, vote majority
 > remove nominated for vote majority)

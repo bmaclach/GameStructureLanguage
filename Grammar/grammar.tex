@@ -56,13 +56,11 @@
 <idList> | `uses?' <identifier> `then' `(' <phaseList> `)' [`otherwise' `(' 
 <phaseList> `)']
 
-<progression> ::= (<affiliationUpdate> | <counterUpdate>) 
-`for' <idList>
+<progression> ::= (<affiliationUpdate> | <counterUpdate>) `for' <idList>
 
 <affiliationUpdate> ::= `elimination' | (`add' | `remove') <name> | 
-[`number preserving'] `swap' <nameList> [`adding' 
-<nameList>] | `change' <name> `to' <name> | `merge' 
-<nameList> [<name>]
+[`number preserving'] `swap' <nameList> [`adding' <nameList>] | `change' <name> 
+`to' <name> | `merge' <nameList> [<name>]
 
 <counterUpdate> ::= (`increase' | `decrease') <name> `by' <value> | `set' 
 <name> `to' <value> 
@@ -72,7 +70,8 @@
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
-<identifier> ::= (`everyone' | <name> | `chance' | `nominated' | `tied' | 
+<identifier> ::= (`everyone' | <name> | `chance' | `random' | `nominated' | 
+`tied' | 
 `eliminated' | <compReference> (`winner' | `loser') | <voteReference> 
 (`majority' | `minority') | (`highest' | `lowest' | `most' | `least') <name> ) 
 [`*' <value>]
@@ -106,6 +105,5 @@ Notes:
 	Both, but decision will automatically also do the progression. The 
 	progression exists for non-decision related resource updates, such as 
 	awarding a player more of a resource for winning a competition.
-	\item chance as itself or as a random player
 \end{itemize}
 \end{document}
