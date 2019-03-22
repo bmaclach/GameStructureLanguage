@@ -1,0 +1,12 @@
+Players:
+Anna, Bob, Carrie, Dennis, Emma, Frank, Grace, Harold, Ivy, Jeff having resource votes 20 min 0, score position
+Rounds:
+competition between everyone
+> increase votes by 3 for competition winner
+> allocation of votes by everyone
+> self-included directed vote by everyone * allocation results between everyone
+> increase position by vote results
+> elimination for lowest position
+repeat 9 times
+Win:
+last one standing

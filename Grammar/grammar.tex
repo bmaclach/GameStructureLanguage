@@ -25,7 +25,7 @@
 <attributeList> ::= <attribute> \{`,' <attribute>\}
 
 <attribute> ::= `affiliation with' <name> | (`score' | `resource' | `counter') 
-<name> [<number>]
+<name> [<number>] [`min' <number>] [`max' <number>]
 
 <roundList> ::= <round> \{`,' <round>\} [<modifierList>]
 
@@ -52,7 +52,8 @@
 <decision> ::= [`self-included'] `vote by' <idList> `between' <idList> 
 [`tiebroken by' (<competition> | <decision> | <identifier>)] | 
 [`self-included'] `nomination of' <number> `by' <identifier> `between' <idList> 
-| `allocate' <name> | [`self-included'] `directed vote by' <idList> `between' 
+| `allocation of' <name> `by' <idList> | [`self-included'] `directed vote by' 
+<idList> `between' 
 <idList> | `uses?' <identifier> `then' `(' <phaseList> `)' [`otherwise' `(' 
 <phaseList> `)']
 
@@ -65,8 +66,9 @@
 <counterUpdate> ::= (`increase' | `decrease') <name> `by' <value> | `set' 
 <name> `to' <value> 
 
-<value> ::= <number> | <name> | (<resultReference> | <allocateReference> |
-<voteReference>) `results'
+<value> ::= <number> | <name> | (<compReference> | <allocateReference> |
+<voteReference>) `results' | <identifier> <name> % for a certain player's 
+%attribute
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
@@ -91,7 +93,7 @@
 
 <winCondition> ::= [`team'] `achieving' <name> `of' <number> | [`team'] 
 `competition' | [`team'] (`highest' | `lowest' | `most' | `least') <name> | 
-<number> `member jury vote'
+<number> `member jury vote' | `last one standing'
 
 <winConditionList> ::= <winCondition> \{`,' <winCondition>\}
 
@@ -105,5 +107,7 @@ Notes:
 	Both, but decision will automatically also do the progression. The 
 	progression exists for non-decision related resource updates, such as 
 	awarding a player more of a resource for winning a competition.
+	\item ties for non-votes? Like lowest score? Maybe I need some sort of 
+	global tiebreaker setting.
 \end{itemize}
 \end{document}
