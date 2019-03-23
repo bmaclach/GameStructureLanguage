@@ -213,7 +213,6 @@ roundList = [roundType1] * 4 + [roundType2] + [roundType1] + [roundType4] + [rou
 for round in roundList:
     voteResults = []
     compResults = []
-    playerList = [x for x in playerList if x not in eliminated]
     round()
 
 vote(eliminated[(len(eliminated)-7):], playerList)
