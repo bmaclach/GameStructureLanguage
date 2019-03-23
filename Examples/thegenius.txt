@@ -1,14 +1,16 @@
 Players:
 Junseok, Minseo, Minsoo, Changyeop, Jungmoon, Gura, Poong, Yuram, Eunji, Sunggyu, Sangmin, Kyungran, Jinho
+
 Rounds:
 competition between everyone
-> vote by competition winner between everyone except competition loser
-> vote by competition loser between everyone except competition winner, vote majority
-> competition between competition loser, vote majority
-> elimination for competition loser
-repeat 10 times,
+vote by winner of competition between everyone except loser of competition
+vote by loser of competition between everyone except winner of competition, majority of vote
+competition between loser of competition, majority of vote
+elimination for loser of competition
+repeat 10 times;
 competition between everyone
-> competition between everyone except competition winner
-> elimination for competition loser
+competition between everyone except winner of competition
+elimination for loser of competition;
+
 Win:
 competition

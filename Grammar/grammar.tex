@@ -27,9 +27,9 @@
 <attribute> ::= `affiliation with' <name> | (`score' | `resource' | `counter') 
 <name> [<number>] [`min' <number>] [`max' <number>]
 
-<roundList> ::= <round> \{`,' <round>\} [<modifierList>]
+<roundList> ::= <round> `;' \{<round> `;'\} [<modifierList>]
 
-<modifierList> ::= <modifier> \{`,' <modifier>\}
+<modifierList> ::= <modifier> `;' \{<modifier> `;'\}
 
 <modifier> ::= [`just' | `from'] (<roundReference> (`before' | `after') 
 <phaseReference> `insert' <phase> | <roundReference> `replace' <phaseReference> 
@@ -43,14 +43,13 @@
 
 <phase> ::= <action> | <progression>
 
-<phaseList> ::= <phase> \{`>' <phase>\}
+<phaseList> ::= <phase> \{`\\n' <phase>\}
 
 <action> ::= <competition> | <decision>
 
 <competition> ::= [`scored'] [`team'] `competition between' <idList>
 
-<decision> ::= [`self-included'] `vote by' <idList> `between' <idList> 
-[`tiebroken by' (<competition> | <decision> | <identifier>)] | 
+<decision> ::= [`self-included'] `vote by' <idList> `between' <idList> | 
 [`self-included'] `nomination of' <number> `by' <identifier> `between' <idList> 
 | `allocation of' <name> `by' <idList> | [`self-included'] `directed vote by' 
 <idList> `between' 
@@ -66,16 +65,19 @@
 <counterUpdate> ::= (`increase' | `decrease') <name> `by' <value> | `set' 
 <name> `to' <value> 
 
-<value> ::= <number> | <name> | (<compReference> | <allocateReference> |
-<voteReference>) `results' | <identifier> <name> % for a certain player's 
+<value> ::= <number> | <name> | `results' `of' (<compReference> | 
+<allocateReference> |
+<voteReference>) | <identifier> <name> % for a certain player's 
 %attribute
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
 
-<identifier> ::= (`everyone' | <name> | `chance' | `random' | `nominated' | 
+<identifier> ::= (`everyone' | <name> | `chance' `(' <idList> `)' | `nominated' 
+| 
 `tied' | 
-`eliminated' | <compReference> (`winner' | `loser') | <voteReference> 
-(`majority' | `minority') | (`highest' | `lowest' | `most' | `least') <name> ) 
+`eliminated' | (`winner' | `loser') `of' <compReference> | (`majority' | 
+`minority') `of' <voteReference>  [<tiebreaker>] | (`highest' | `lowest' | 
+`most' | `least') <name> `(' <idList> `)' [<tiebreaker>]) 
 [`*' <value>]
 
 <compReference> ::= `competition' [<number>] 
@@ -83,6 +85,8 @@
 <allocateReference> ::= `allocation' [<number>]
 
 <voteReference> ::= `vote' [<number>]
+
+<tiebreaker> ::= `tiebroken by' ([<action>] <identifier>)
 
 <name> ::= (`a' | ... | `z' | `A' | ... | `Z') \{`a' | ... | `z' | `A' | ... | 
 `Z' | `0' | ... | `9'\}
@@ -93,7 +97,7 @@
 
 <winCondition> ::= [`team'] `achieving' <name> `of' <number> | [`team'] 
 `competition' | [`team'] (`highest' | `lowest' | `most' | `least') <name> | 
-<number> `member jury vote' | `last one standing'
+<number> `member jury vote' | `survive'
 
 <winConditionList> ::= <winCondition> \{`,' <winCondition>\}
 
@@ -107,7 +111,5 @@ Notes:
 	Both, but decision will automatically also do the progression. The 
 	progression exists for non-decision related resource updates, such as 
 	awarding a player more of a resource for winning a competition.
-	\item ties for non-votes? Like lowest score? Maybe I need some sort of 
-	global tiebreaker setting.
 \end{itemize}
 \end{document}
