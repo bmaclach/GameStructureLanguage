@@ -1,5 +1,5 @@
 Players:
-randomly divide Debb, Kel, Marilyn, Mitchell, Kimmi, Michael, Jeff, Alicia, Jerri, Nick, Amber, Rodger, Elizabeth, Keith, Colby, Tina into Kucha, Ogakor having counter votesAgainst 
+randomly divide Debb, Kel, Maralyn, Mitchell, Kimmi, Michael, Jeff, Alicia, Jerri, Nick, Amber, Rodger, Elizabeth, Keith, Colby, Tina into Kucha, Ogakor having counter votesAgainst 
 
 Rounds:
 team competition between Kucha, Ogakor 
@@ -8,7 +8,7 @@ elimination for majority of vote tiebroken by
     vote by loser of competition except tied between tied 
     majority of vote tiebroken by 
         most votesAgainst between tied tiebroken by
-            chance between everyone except tied
+            chance between loser of competition except tied
 increase votesAgainst by results of vote for loser of competition
 repeated 6 times;
 competition between everyone
@@ -20,7 +20,7 @@ elimination for majority of vote tiebroken by
             chance between everyone except tied, winner of competition
 increase votesAgainst by results of vote for everyone
 repeated 8 times;
-round 4 before phase 1 insert swap Kucha, Ogakor;
+round 5 before phase 1 insert swap Kucha, Ogakor;
 round 7 before phase 1 insert merge Kucha, Ogakor;
 
 Win:

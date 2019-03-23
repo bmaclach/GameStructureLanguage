@@ -5,7 +5,7 @@ class Player:
         self.points = 0
         self.affiliations = [aff]
 
-def getCompResults(compTeams):
+def getScoredTeamCompResults(compTeams):
     print("Team competition between:")
     for team in compTeams:
         print(team)
