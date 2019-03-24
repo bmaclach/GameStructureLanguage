@@ -9,11 +9,19 @@ def getScoredTeamCompResults(compTeams):
     print("Team competition between:")
     for team in compTeams:
         print(team)
-    scores = []
+    compDict = {"scores": []}
     for team in compTeams:
         pts = int(input("What did " + team + " score in this round?\n"))
-        scores.append(pts)
-    return scores
+        compDict["scores"].append({"team": team,
+                                   "score": pts})
+    compResults.append(compDict)
+
+def roundType1():
+    getScoredTeamCompResults(teamList)
+    for teamScore in compResults[0]["scores"]:
+        teamPlayers = [x for x in playerList if teamScore["team"] in x.affiliations]
+        for player in teamPlayers:
+            player.points += teamScore["score"]
 
 jose = Player("Jose", "Jays")
 kevin = Player("Kevin", "Jays")
@@ -22,12 +30,11 @@ joe = Player("Joe", "Yankees")
 teamList = ["Jays", "Yankees"]
 playerList = [jose, kevin, john, joe]
 
-for i in range(9):
-    results = getCompResults(teamList)
-    for team, score in zip(teamList, results):
-        teamPlayers = [x for x in playerList if team in x.affiliations]
-        for player in teamPlayers:
-            player.points += score
+roundList = [roundType1] * 9
+
+for round in roundList:
+    compResults = []
+    round()
     
 sortedPlayers = sorted(playerList, key=lambda x: x.points, reverse=True)
 for team in teamList:

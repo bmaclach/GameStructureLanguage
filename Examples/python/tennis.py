@@ -8,27 +8,20 @@ def getCompResults(compPlayers):
     print("Competition between:")
     for player in compPlayers:
         print(player.name)
-    winName = input("Who won this round?\n")
-    if len(compPlayers) > 2:
-        loserDetermined = False
-        while not loserDetermined:
-            loseName = input("Who lost this round?\n")
-            if loseName != winName:
-                loserDetermined = True
-            else:
-                print("Loser cannot be same as winner!\n")
-        for player in compPlayers:
+    haveWinner = False
+    playerNames = [x.name for x in compPlayers]
+    while not haveWinner:
+        winName = input("Who won this round?\n")
+        if winName in playerNames:
+            haveWinner = True
+        else:
+            print(winName + " is not an eligible winner!")
+    compDict = {}
+    for player in compPlayers:
             if player.name == winName:
                 winner = player
-            elif player.name == loseName:
-                loser = player
-    else:
-        for player in compPlayers:
-            if player.name == winName:
-                winner = player
-            else:
-                loser = player
-    return [winner, loser]
+                compDict.update({"winner": winner})
+    compResults.append(compDict)
 
 def checkWinCondition():
     for player in playerList:
@@ -36,13 +29,19 @@ def checkWinCondition():
             return True
     return False
 
+def roundType1():
+    getCompResults(playerList)
+    compResults[0]["winner"].set = compResults[0]["winner"].set + 1
+
 john = Player("John")
 joe = Player("Joe")
 playerList = [john, joe]
 
-for i in range(7):
-    roundWin = getCompResults(playerList)[0]
-    roundWin.set = roundWin.set + 1
+roundList = [roundType1] * 7
+
+for round in roundList:
+    compResults = []
+    round()
     if checkWinCondition():
-        print(roundWin.name + " won!") 
+        print(compResults[0]["winner"].name + " won!") 
         break

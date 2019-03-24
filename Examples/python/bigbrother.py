@@ -22,6 +22,7 @@ def getCompWinner(compPlayers):
         print(player.name)
     playerNames = [x.name for x in compPlayers]
     haveWinner = False
+    compDict = {}
     while not haveWinner:
         winName = input("Who won this competition?\n")
         if winName in playerNames:
@@ -31,7 +32,8 @@ def getCompWinner(compPlayers):
     for player in compPlayers:
         if player.name == winName:
             winner = player
-    return compResults.append([winner])
+            compDict.update({"winner": winner})
+    return compResults.append(compDict)
 
 def nominate(nominators, numNominated, pool):
     print("Nomination between:")
@@ -100,10 +102,10 @@ def randomDraw(pool):
 def uses(player):
     haveDecision = False
     while not haveDecision:
-        decision = input("Does " + player.name + " use their power? y/n?\n")
-        if decision == "y":
+        decision = input("Does " + player.name + " use their power? yes/no?\n")
+        if decision in {"yes", "y", "Yes"}:
             return True
-        elif decision == "n":
+        elif decision in {"no", "n", "No"}:
            return False
         else:
             print(decision + " is not a valid answer!")
@@ -124,16 +126,16 @@ def roundType1():
     for player in [x for x in playerList if "HOH" in x.affiliations]:
         player.removeAff("HOH")
         player.addAff("houseguest")
-    compResults[0][0].addAff("HOH")
+    compResults[0]["winner"].addAff("HOH")
     nominate([x for x in playerList if "HOH" in x.affiliations], 2, playerList)
     compPlayers = [x for x in playerList if "HOH" in x.affiliations or "nominated" in x.affiliations]
     for i in range(3):
         compPlayers.append(randomDraw([x for x in playerList if x not in compPlayers]))
     getCompWinner(compPlayers)
-    if uses(compResults[1][0]):
-        vote([compResults[1][0]], [x for x in playerList if "nominated" in x.affiliations], True)
+    if uses(compResults[1]["winner"]):
+        vote([compResults[1]["winner"]], [x for x in playerList if "nominated" in x.affiliations], True)
         saved = getVoteMajority(voteResults[0])
-        nominate([x for x in playerList if "HOH" in x.affiliations], 1, [x for x in playerList if x != compResults[1][0]])
+        nominate([x for x in playerList if "HOH" in x.affiliations], 1, [x for x in playerList if x != compResults[1]["winner"]])
         saved.removeAff("nominated")
         del voteResults[0] # vote in branch should not be included in all votes
     vote([x for x in playerList if "HOH" not in x.affiliations and "nominated" not in x.affiliations], [x for x in playerList if "nominated" in x.affiliations])
@@ -146,13 +148,13 @@ def roundType2():
     for player in [x for x in playerList if "HOH" in x.affiliations]:
         player.removeAff("HOH")
         player.addAff("houseguest")
-    compResults[0][0].addAff("HOH")
+    compResults[0]["winner"].addAff("HOH")
     nominate([x for x in playerList if "HOH" in x.affiliations], 2, playerList)
     getCompWinner(playerList)
-    if uses(compResults[1][0]):
-        vote([compResults[1][0]], [x for x in playerList if "nominated" in x.affiliations], True)
+    if uses(compResults[1]["winner"]):
+        vote([compResults[1]["winner"]], [x for x in playerList if "nominated" in x.affiliations], True)
         saved = getVoteMajority(voteResults[0])
-        nominate([x for x in playerList if "HOH" in x.affiliations], 1, [x for x in playerList if x != compResults[1][0]])
+        nominate([x for x in playerList if "HOH" in x.affiliations], 1, [x for x in playerList if x != compResults[1]["winner"]])
         saved.removeAff("nominated")
         del voteResults[0] # vote in branch should not be included in all votes
     vote([x for x in playerList if "HOH" not in x.affiliations and "nominated" not in x.affiliations], [x for x in playerList if "nominated" in x.affiliations])
@@ -162,7 +164,7 @@ def roundType2():
 
 def roundType3():
     getCompWinner(playerList)
-    vote([compResults[0][0]], playerList)
+    vote([compResults[0]["winner"]], playerList)
     eliminate(getVoteMajority(voteResults[0]))
 
 lori = Player("Lori")
