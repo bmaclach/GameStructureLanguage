@@ -2,7 +2,11 @@ class Player:
 
     def __init__(self, name):
         self.name = name
-        self.set = 0
+        self.counters = {"set": 0}
+
+    def updateCounter(self, change, counter):
+        self.counters[counter] += change
+        return change
 
 def getCompResults(compPlayers):
     print("Competition between:")
@@ -25,13 +29,13 @@ def getCompResults(compPlayers):
 
 def checkWinCondition():
     for player in playerList:
-        if player.set >= 4:
+        if player.counters["set"] >= 4:
             return True
     return False
 
 def roundType1():
     getCompResults(playerList)
-    compResults[0]["winner"].set = compResults[0]["winner"].set + 1
+    compResults[0]["winner"].updateCounter(1, "set")
 
 john = Player("John")
 joe = Player("Joe")

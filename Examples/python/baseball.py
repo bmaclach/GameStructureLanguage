@@ -2,8 +2,12 @@ class Player:
 
     def __init__(self, name, aff):
         self.name = name
-        self.points = 0
+        self.counters = {"points": 0}
         self.affiliations = [aff]
+
+    def updateCounter(self, change, counter):
+        self.counters[counter] += change
+        return change
 
 def getScoredTeamCompResults(compTeams):
     print("Team competition between:")
@@ -21,7 +25,7 @@ def roundType1():
     for teamScore in compResults[0]["scores"]:
         teamPlayers = [x for x in playerList if teamScore["team"] in x.affiliations]
         for player in teamPlayers:
-            player.points += teamScore["score"]
+            player.updateCounter(teamScore["score"], "points")
 
 jose = Player("Jose", "Jays")
 kevin = Player("Kevin", "Jays")
@@ -36,7 +40,7 @@ for round in roundList:
     compResults = []
     round()
     
-sortedPlayers = sorted(playerList, key=lambda x: x.points, reverse=True)
+sortedPlayers = sorted(playerList, key=lambda x: x.counters["points"], reverse=True)
 for team in teamList:
     if team in sortedPlayers[0].affiliations:
         print(team + " won!")

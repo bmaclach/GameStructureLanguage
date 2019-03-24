@@ -4,7 +4,7 @@ class Player:
 
     def __init__(self, name):
         self.name = name
-        self.votesAgainst = 0
+        self.counters = {"votesAgainst": 0}
         self.affiliations = []
 
     def addAff(self, aff):
@@ -12,6 +12,10 @@ class Player:
 
     def removeAff(self, aff):
         self.affiliations.remove(aff)
+
+    def updateCounter(self, change, counter):
+        self.counters[counter] += change
+        return change
 
 def defaultTiebreaker(tied):
     badRock = random.randint(0, len(tied)-1)
@@ -112,16 +116,16 @@ def reVoteTiebreaker(tied):
     return tiebroken
 
 def pastVotesTiebreaker(tied):
-    tiebroken = getMaxVotesAgainst(tied, rocksTiebreaker)
+    tiebroken = getMax(tied, "votesAgainst", rocksTiebreaker)
     return tiebroken
 
-def getMaxVotesAgainst(players, tiebreaker):
-    sortedPlayers = sorted(players, key=lambda x: x.votesAgainst, reverse=True)
-    if sortedPlayers[0].votesAgainst == sortedPlayers[1].votesAgainst:
-        maxVotes = sortedPlayers[0].votesAgainst
+def getMax(players, metric, tiebreaker):
+    sortedPlayers = sorted(players, key=lambda x: x.counters["votesAgainst"], reverse=True)
+    if sortedPlayers[0].counters["votesAgainst"] == sortedPlayers[1].counters["votesAgainst"]:
+        maxVotes = sortedPlayers[0].counters["votesAgainst"]
         tied = sortedPlayers[0:2]
         for splayer in sortedPlayers[2:]:
-            if splayer.votesAgainst == maxVotes:
+            if splayer.counters["votesAgainst"] == maxVotes:
                 tied.append(splayer)
             else:
                 break
@@ -173,7 +177,7 @@ def roundType1():
     eliminate(getVoteMajority(voteResults[0], reVoteTiebreaker))
     for playerResults in voteResults[0]:
         if playerResults["player"] in [x for x in playerList if loser in x.affiliations]:
-            playerResults["player"].votesAgainst += playerResults["votes"]
+            playerResults["player"].updateCounter(playerResults["votes"], "votesAgainst")
 
 def roundType2():
     swap(["Kucha", "Ogakor"])
@@ -184,7 +188,7 @@ def roundType3():
     vote(playerList, [x for x in playerList if x != compResults[0]["winner"]])
     eliminate(getVoteMajority(voteResults[0], reVoteTiebreaker2))
     for playerResults in voteResults[0]:
-        playerResults["player"].votesAgainst += playerResults["votes"]
+        playerResults["player"].updateCounter(playerResults["votes"], "votesAgainst")
 
 def roundType4():
     merge(["Kucha", "Ogakor"])
