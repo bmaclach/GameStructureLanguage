@@ -66,7 +66,7 @@ def randomlyDivideTeams(teams, players):
             del openTeams[team]
             del counts[team]
 
-def vote(voters, votees):
+def vote(voters, votees, selfVote=False):
     print("Vote between:")
     for votee in votees:
         print(votee.name)
@@ -77,7 +77,7 @@ def vote(voters, votees):
         haveVote = False
         while not haveVote:
             playerVote = input("Who does " + voter.name + " vote for?\n")
-            if playerVote == voter.name:
+            if not selfVote and playerVote == voter.name:
                 print("You cannot vote for yourself!")
             elif playerVote in voteeNames:
                 votes.append(playerVote)
