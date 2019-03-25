@@ -17,7 +17,7 @@ repeated 9 times;
 competition between everyone
 vote by winner of competition between everyone
 elimination of majority of vote;
-from round 7 replace phase 5 with competition between everyone;
+from round 7 instead of phase 5 insert competition between everyone;
 
 Win:
 7 member jury vote

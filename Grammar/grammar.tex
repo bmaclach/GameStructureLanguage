@@ -29,13 +29,13 @@
 <name> [`starting at' <number>] [`with minimum of' <number>] [`with maximum of' 
 <number>]
 
-<roundList> ::= <round> `;' \{<round> `;'\} [<modifierList>]
+<roundList> ::= <round> `;' \{<round>\} [<modifierList>]
 
-<modifierList> ::= <modifier> `;' \{<modifier> `;'\}
+<modifierList> ::= <modifier> `;' \{<modifier>\}
 
-<modifier> ::= [`just' | `from'] (<roundReference> (`before' | `after') 
-<phaseReference> `insert' <phase> | <roundReference> `replace' <phaseReference> 
-`with' <phase>)
+<modifier> ::= [`just' | `from'] (<roundReference> (`before' | `after' | 
+`instead of') 
+<phaseReference> `insert' <phase>)
 
 <roundReference> ::= `round' [<number>]
 
@@ -98,7 +98,7 @@
 
 <number> ::= (`0' | ... | `9')+
 
-<winCondition> ::= [`team'] `achieving' <name> `of' <number> | [`team'] 
+<winCondition> ::= [`team'] `reach' <name> `of' <number> | [`team'] 
 `competition' | [`team'] (`highest' | `lowest' | `most' | `least') <name> | 
 <number> `member jury vote' | `survive'
 

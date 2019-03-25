@@ -6,4 +6,4 @@ competition between everyone
 increase set by 1 for winner of competition repeated 7 times;
 
 Win:
-achieving set of 4
+reach set of 4
