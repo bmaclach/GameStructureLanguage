@@ -4,7 +4,7 @@ randomly divide Debb, Kel, Maralyn, Mitchell, Kimmi, Michael, Jeff, Alicia, Jerr
 Rounds:
 team competition between Kucha, Ogakor 
 vote by loser of competition between loser of competition 
-elimination for majority of vote tiebroken by 
+elimination of majority of vote tiebroken by 
     vote by loser of competition except tied between tied 
     majority of vote tiebroken by 
         most votesAgainst (tied) tiebroken by
@@ -13,15 +13,15 @@ increase votesAgainst by results of vote for loser of competition
 repeated 6 times;
 competition between everyone
 vote by everyone between everyone except winner of competition
-elimination for majority of vote tiebroken by 
+elimination of majority of vote tiebroken by 
     vote by everyone except tied between tied 
     majority of vote tiebroken by 
         most votesAgainst (tied) tiebroken by
             chance (everyone except tied, winner of competition)
 increase votesAgainst by results of vote for everyone
 repeated 8 times;
-round 5 before phase 1 insert swap Kucha, Ogakor;
-round 7 before phase 1 insert merge Kucha, Ogakor;
+round 5 before phase 1 insert swap Kucha, Ogakor for everyone;
+round 7 before phase 1 insert merge Kucha, Ogakor for everyone;
 
 Win:
 7 member jury vote

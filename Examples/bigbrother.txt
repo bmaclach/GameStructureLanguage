@@ -12,11 +12,11 @@ uses? winner of competition then (vote by winner of competition between nominate
     remove nominated for majority of vote)
 vote by everyone except HOH, nominated between nominated tiebroken by
     vote by HOH between nominated
-elimination for majority of vote
+elimination of majority of vote
 repeated 9 times;
 competition between everyone
 vote by winner of competition between everyone
-elimination for majority of vote;
+elimination of majority of vote;
 from round 7 replace phase 5 with competition between everyone;
 
 Win:

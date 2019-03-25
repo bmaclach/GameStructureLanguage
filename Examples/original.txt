@@ -7,7 +7,7 @@ increase votes by 3 for winner of competition
 allocation of votes by everyone
 self-included directed vote by everyone * results of allocation between everyone
 increase position by results of vote
-elimination for lowest position (everyone) tiebroken by
+elimination of lowest position (everyone) tiebroken by
     lowest votes (tied) tiebroken by
         chance (tied)
 repeat 9 times;
