@@ -1,5 +1,5 @@
 Players:
-Anna, Bob, Carrie, Dennis, Emma, Frank, Grace, Harold, Ivy, Jeff having resource votes 20 min 0, score position
+Anna, Bob, Carrie, Dennis, Emma, Frank, Grace, Harold, Ivy, Jeff all with resource called votes starting at 20 with minimum of 0, score called position
 
 Rounds:
 competition between everyone

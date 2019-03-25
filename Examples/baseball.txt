@@ -1,5 +1,5 @@
 Players:
-team Jays: Jose, Kevin, team Yankees: John, Joe having score points
+team Jays: Jose, Kevin, team Yankees: John, Joe all with score called points
 
 Rounds:
 team competition between Jays, Yankees

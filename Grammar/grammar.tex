@@ -14,7 +14,7 @@
 <winConditionList>
 
 <teamList> ::= (<team> \{`,' <team>\} | <playerList> | `randomly divide' 
-<playerList> `into' <nameList>) [`having' <attributeList>]
+<playerList> `into' <nameList>) [`all with' <attributeList>]
 
 <team> ::= `team' <name> `:' <playerList>
 
@@ -24,8 +24,10 @@
 
 <attributeList> ::= <attribute> \{`,' <attribute>\}
 
-<attribute> ::= `affiliation with' <name> | (`score' | `resource' | `counter') 
-<name> [<number>] [`min' <number>] [`max' <number>]
+<attribute> ::= `affiliation called' <name> | (`score' | `resource' | 
+`counter') `called'
+<name> [`starting at' <number>] [`with minimum of' <number>] [`with maximum of' 
+<number>]
 
 <roundList> ::= <round> `;' \{<round> `;'\} [<modifierList>]
 
