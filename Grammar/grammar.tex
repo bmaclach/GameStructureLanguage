@@ -29,7 +29,10 @@
 <name> [`starting at' <number>] [`with minimum of' <number>] [`with maximum of' 
 <number>]
 
-<roundList> ::= <round> `;' \{<round>\} [<modifierList>]
+<roundList> ::= <round> `;' \{<round>\}
+
+<round> ::= <phaseList> [`repeated' <number> `times' `with modifications' `:' 
+<modifierList>]
 
 <modifierList> ::= <modifier> `;' \{<modifier>\}
 
@@ -40,8 +43,6 @@
 <roundReference> ::= `round' [<number>]
 
 <phaseReference> ::= `phase' [<number>]
-
-<round> ::= <phaseList> [`repeated' <number> `times']
 
 <phase> ::= <action> | <progression>
 
@@ -96,7 +97,7 @@
 
 <nameList> ::= <name> \{`,' <name>\}
 
-<number> ::= (`0' | ... | `9')+
+<number> ::= [`-'] (`0' | ... | `9')+
 
 <winCondition> ::= [`team'] `reach' <name> `of' <number> | [`team'] 
 `competition' | [`team'] (`highest' | `lowest' | `most' | `least') <name> | 
