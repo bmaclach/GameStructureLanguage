@@ -23,7 +23,8 @@ source-repository head
 library
   exposed-modules:
       Scanner,
-      AST
+      AST,
+      Parser
   other-modules:
       Paths_4TB3Project
   hs-source-dirs:
@@ -56,4 +57,5 @@ test-suite 4TB3Project-test
   build-depends:
       4TB3Project
     , base >=4.7 && <5
+    , hspec >=2.7
   default-language: Haskell2010

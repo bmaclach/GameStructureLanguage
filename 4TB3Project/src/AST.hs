@@ -2,12 +2,12 @@
 This defines the AST for the language defining game structures.
 -}
 module AST (
-    Name, Number, Game(..), Player(..), Attribute(..), Round(..), TimeRef(..), 
-    Modifier(..), Phase(..), Action(..), Competitor(..), Competition(..),
-    Decision(..), Progression(..), AffiliationUpdate(..), CounterUpdate(..),
-    IdentifierList(..), IdentifierVal(..), Identifier(..), Value(..),
-    ActRef(..), CompRef(..), VoteRef(..), AllocRef(..), Tiebreaker(..),
-    WinCondition(..)
+    Name, Number, Game(..), PlayerInfo(..), Player(..), Attribute(..), 
+    Round(..), TimeRef(..), Modifier(..), Phase(..), Action(..), Competitor(..),
+    Competition(..), Decision(..), Progression(..), AffiliationUpdate(..),
+    CounterUpdate(..), IdentifierList(..), IdentifierVal(..), Identifier(..), 
+    Value(..), ActRef(..), CompRef(..), VoteRef(..), AllocRef(..), 
+    Tiebreaker(..), WinCondition(..)
 ) where
 
 -- | A name is represented by a string
@@ -16,11 +16,14 @@ type Name = String
 -- | A number is represented by an integer
 type Number = Integer
 
--- | A game is a list of players, a list of rounds, and a list of win conditions
-data Game = G [Player] [Round] [WinCondition]
+-- | A game is information about the players, a list of team names, a list of rounds, and a list of win conditions
+data Game = G PlayerInfo [Round] [WinCondition] deriving (Show, Eq)
+
+-- | Player information includes the list of players, the list of teams, and a boolean that, if true, means the players should be randomly and evenly divided between the teams
+data PlayerInfo = PI [Player] [Name] Bool deriving (Show, Eq)
 
 -- | A player has a name and a list of attributes
-data Player = P Name [Attribute]
+data Player = P Name [Attribute] deriving (Show, Eq)
 
 -- | An attribute is either an affiliation or a counter
 data Attribute 
@@ -29,29 +32,30 @@ data Attribute
     -- | A counter has a name and potentially 3 numbers: a starting value, a 
     -- minimum value, and a maximum value
     | Counter Name (Maybe Number) (Maybe Number) (Maybe Number)
+    deriving (Show, Eq)
 
 -- | A round is a list of phases, a number referring to how many times the round will be played, and a list of modifiers
-data Round = R [Phase] Number [Modifier]
+data Round = R [Phase] Number [Modifier] deriving (Show, Eq)
 
 -- | A reference relative to a given time can be "before", "after", or "during"
-data TimeRef = Before | After | During
+data TimeRef = Before | After | During deriving (Show, Eq)
 
 -- | A modifier can effect either "just" one round or "from" a certain round onwards
 -- A modifier is parameterized by a number referring to the round to be modified, a TimeRef and another number that together determine which phase should be modified, and a phase representing the modified phase to be inserted in the round.
-data Modifier = Just Number TimeRef Number Phase | From Number TimeRef Number Phase
+data Modifier = Jst Number TimeRef Number Phase | From Number TimeRef Number Phase deriving (Show, Eq)
 
 -- | A phase is either an action or a progression.
-data Phase = Act Action | Prog Progression
+data Phase = Act Action | Prog Progression deriving (Show, Eq)
 
 -- | An action is either a competition or a decision
-data Action = Comp Competition | Dec Decision
+data Action = Comp Competition | Dec Decision deriving (Show, Eq)
 
 -- | A competitor is either a team or an individual
-data Competitor = Team | Individual
+data Competitor = Team | Individual deriving (Show, Eq)
 
 -- | A competition is either scored or placed (i.e. first place, second place, etc.)
 -- A competition is parameterized by whether it is played between teams or individuals, and by the identifiers for the players who compete.
-data Competition = Scored Competitor IdentifierList | Placed Competitor IdentifierList
+data Competition = Scored Competitor IdentifierList | Placed Competitor IdentifierList deriving (Show, Eq)
 
 -- | A decision is either a vote, nomination, allocation, directed vote, or a binary decision on whether something is used.
 data Decision 
@@ -65,9 +69,10 @@ data Decision
     | DirectedVote IdentifierList IdentifierList Bool
     -- | A uses decision is parameterized by an identifier for who will make the decision, a list of phases to occur if the decision is "yes", and a list of phases to occur if the decision is "no"
     | Uses Identifier [Phase] [Phase]
+    deriving (Show, Eq)
 
 -- | A progression is either an update to affiliations or to counters, for a given list of identifiers
-data Progression = AU AffiliationUpdate IdentifierList | CU CounterUpdate IdentifierList
+data Progression = AU AffiliationUpdate IdentifierList | CU CounterUpdate IdentifierList deriving (Show, Eq)
 
 -- | Represents changes to a players lists of affiliations
 data AffiliationUpdate 
@@ -83,6 +88,7 @@ data AffiliationUpdate
     | Swap [Name] [Name] Bool 
     -- | For when all players with an affiliation in the given list should have that affiliation removed and replaced with a single affiliation
     | Merge [Name] (Maybe Name)
+    deriving (Show, Eq)
 
 -- | Represents changes to a given counter for certain players
 data CounterUpdate 
@@ -92,12 +98,13 @@ data CounterUpdate
     | Decrease Name Value 
     -- | For when a given counter should be set to some value
     | Set Name Value
+    deriving (Show, Eq)
 
 -- | An identifier list is a list of identifiers and a second list of identifiers to not include in the list
-data IdentifierList = IdList [IdentifierVal] [Identifier]
+data IdentifierList = IdList [IdentifierVal] [Identifier] deriving (Show, Eq)
 
 -- | Groups together an identifier with a value representing the number of times that identifier should be considered
-data IdentifierVal = IdVal Identifier Value
+data IdentifierVal = IdVal Identifier Value deriving (Show, Eq)
 
 -- | A representation of a reference to a player or group of players
 data Identifier 
@@ -127,6 +134,7 @@ data Identifier
     | Most Name IdentifierList Tiebreaker
     -- | Refers to the player who has the least of a given counter, considering only those players referenced by the list of identifiers, with the tiebreaker determining what should be done in the case of a tie. 
     | Least Name IdentifierList Tiebreaker
+    deriving (Show, Eq)
 
 -- | A value is any reference that resolves to a number
 data Value 
@@ -136,21 +144,22 @@ data Value
     | Count Name
     -- | For when the value comes from the results of an action
     | Result ActRef
+    deriving (Show, Eq)
 
 -- | For a reference to a previous action, either a competition, vote, or allocation
-data ActRef = Cmp CompRef | Vt VoteRef | Alloc AllocRef
+data ActRef = Cmp CompRef | Vt VoteRef | Alloc AllocRef deriving (Show, Eq)
 
 -- | A competition is referenced by a number for when it occured
-data CompRef = CRef Number
+data CompRef = CRef Number deriving (Show, Eq)
 
 -- | A vote is referenced by a number for when it occured
-data VoteRef = VRef Number
+data VoteRef = VRef Number deriving (Show, Eq)
 
 -- | An allocation is referenced by a number for when it occured
-data AllocRef = ARef Number
+data AllocRef = ARef Number deriving (Show, Eq)
 
 -- | A tiebreaker might include an action before choosing an identifier to resolve a tie
-data Tiebreaker = Tiebreak (Maybe Action) Identifier
+data Tiebreaker = Tiebreak (Maybe Action) Identifier deriving (Show, Eq)
 
 -- | A win condition must be satisfied for a player to win the game
 data WinCondition
@@ -164,3 +173,4 @@ data WinCondition
     | Goal Name Number Competitor 
     -- | For when the winner is either a team or individual in a given list of identifiers
     | Ids IdentifierList Competitor
+    deriving (Show, Eq)
