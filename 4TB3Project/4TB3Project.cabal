@@ -22,7 +22,8 @@ source-repository head
 
 library
   exposed-modules:
-      Scanner
+      Scanner,
+      AST
   other-modules:
       Paths_4TB3Project
   hs-source-dirs:

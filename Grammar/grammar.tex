@@ -53,7 +53,7 @@
 <competition> ::= [`scored'] [`team'] `competition between' <idList>
 
 <decision> ::= [`self-included'] `vote by' <idList> `between' <idList> | 
-[`self-included'] `nomination of' <number> `by' <identifier> `between' <idList> 
+[`self-included'] `nomination of' <number> `by' <idList> `between' <idList> 
 | `allocation of' <name> `by' <idList> | [`self-included'] `directed vote by' 
 <idList> `between' 
 <idList> | `uses?' <identifier> `then' `(' <phaseList> `)' [`otherwise' `(' 
@@ -71,7 +71,7 @@
 
 <value> ::= <number> | <name> | `results' `of' (<compReference> | 
 <allocateReference> |
-<voteReference>) | <identifier> <name> % for a certain player's 
+<voteReference>) %| <identifier> <name> for a certain player's 
 %attribute
 
 <idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
