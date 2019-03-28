@@ -1,9 +1,9 @@
 Players:
-John, Joe all with score called set
+John, Joe all with score called sets
 
 Rounds:
-competition between everyone
+competition between everyone.
 increase set by 1 for winner of competition repeated 7 times;
 
 Win:
-reach set of 4
+reach 4 sets

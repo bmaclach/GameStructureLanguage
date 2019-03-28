@@ -2,11 +2,11 @@ Players:
 Anna, Bob, Carrie, Dennis, Emma, Frank, Grace, Harold, Ivy, Jeff all with resource called votes starting at 20 with minimum of 0, score called position
 
 Rounds:
-competition between everyone
-increase votes by 3 for winner of competition
-allocation of votes by everyone
-self-included directed vote by everyone * results of allocation between everyone
-increase position by results of vote for everyone
+competition between everyone.
+increase votes by 3 for winner of competition.
+allocation of votes by everyone.
+self-included directed vote by everyone * results of allocation between everyone.
+increase position by results of vote for everyone.
 elimination of lowest position (everyone) tiebroken by
     lowest votes (tied) tiebroken by
         chance (tied)

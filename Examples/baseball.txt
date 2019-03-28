@@ -2,9 +2,9 @@ Players:
 team Jays: Jose, Kevin, team Yankees: John, Joe all with score called points
 
 Rounds:
-team competition between Jays, Yankees
-increase points by results of competition for everyone 
+team competition between Jays, Yankees.
+increase points by results of competition for everyone
 repeated 9 times;
 
 Win:
-team highest points
+highest points for team

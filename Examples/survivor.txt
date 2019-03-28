@@ -2,26 +2,26 @@ Players:
 randomly divide Debb, Kel, Maralyn, Mitchell, Kimmi, Michael, Jeff, Alicia, Jerri, Nick, Amber, Rodger, Elizabeth, Keith, Colby, Tina into Kucha, Ogakor all with counter called votesAgainst 
 
 Rounds:
-team competition between Kucha, Ogakor 
-vote by loser of competition between loser of competition 
+team competition between Kucha, Ogakor .
+vote by loser of competition between loser of competition. 
 elimination of majority of vote tiebroken by 
     vote by loser of competition except tied between tied 
     majority of vote tiebroken by 
         most votesAgainst (tied) tiebroken by
-            chance (loser of competition except tied)
+            chance (loser of competition except tied).
 increase votesAgainst by results of vote for loser of competition
-repeated 6 times;
-competition between everyone
-vote by everyone between everyone except winner of competition
+repeated 6 times
+round 5 before phase 1 insert swap Kucha, Ogakor for everyone;
+competition between everyone.
+vote by everyone between everyone except winner of competition.
 elimination of majority of vote tiebroken by 
     vote by everyone except tied between tied 
     majority of vote tiebroken by 
         most votesAgainst (tied) tiebroken by
-            chance (everyone except tied, winner of competition)
+            chance (everyone except tied, winner of competition).
 increase votesAgainst by results of vote for everyone
-repeated 8 times;
-round 5 before phase 1 insert swap Kucha, Ogakor for everyone;
-round 7 before phase 1 insert merge Kucha, Ogakor for everyone;
+repeated 8 times
+round 1 before phase 1 insert merge Kucha, Ogakor for everyone;
 
 Win:
 7 member jury vote
