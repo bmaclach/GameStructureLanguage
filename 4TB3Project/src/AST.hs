@@ -127,13 +127,13 @@ data Identifier
     -- | Refers to the loser of a competition
     | Loser CompRef 
     -- | Refers to the player who received the majority of the votes, where the tiebreaker determines what should be done in the case of a tie.
-    | Majority VoteRef Tiebreaker 
+    | Majority VoteRef (Maybe Tiebreaker) 
     -- | Refers to the player who received the minority of the votes, where the tiebreaker determines what should be done in the case of a tie.
-    | Minority VoteRef Tiebreaker 
+    | Minority VoteRef (Maybe Tiebreaker) 
     -- | Refers to the player who has the most of a given counter, considering only those players referenced by the list of identifiers, with the tiebreaker determining what should be done in the case of a tie.
-    | Most Name IdentifierList Tiebreaker
+    | Most Name IdentifierList (Maybe Tiebreaker)
     -- | Refers to the player who has the least of a given counter, considering only those players referenced by the list of identifiers, with the tiebreaker determining what should be done in the case of a tie. 
-    | Least Name IdentifierList Tiebreaker
+    | Least Name IdentifierList (Maybe Tiebreaker)
     deriving (Show, Eq)
 
 -- | A value is any reference that resolves to a number

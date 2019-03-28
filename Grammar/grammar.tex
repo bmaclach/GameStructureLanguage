@@ -20,7 +20,7 @@
 
 <playerList> ::= <player> \{`,' <player>\}
 
-<player> ::= <name> [<attributeList>]
+<player> ::= <name> [`with' <attributeList>]
 
 <attributeList> ::= <attribute> \{`,' <attribute>\}
 
@@ -31,8 +31,8 @@
 
 <roundList> ::= <round> `;' \{<round>\}
 
-<round> ::= <phaseList> [`repeated' <number> `times' `with modifications' `:' 
-<modifierList>]
+<round> ::= <phaseList> [`repeated' <number> `times' [`with modifications' `:' 
+<modifierList>]]
 
 <modifierList> ::= <modifier> `;' \{<modifier>\}
 
@@ -40,9 +40,9 @@
 `instead of') 
 <phaseReference> `insert' <phase>)
 
-<roundReference> ::= `round' [<number>]
+<roundReference> ::= `round' <number>
 
-<phaseReference> ::= `phase' [<number>]
+<phaseReference> ::= `phase' <number>
 
 <phase> ::= <action> | <progression>
 
@@ -50,17 +50,18 @@
 
 <action> ::= <competition> | <decision>
 
-<competition> ::= [`scored'] [`team'] `competition between' <idList>
+<competition> ::= [`scored'] [`team'] `competition between' <identifierList>
 
-<decision> ::= [`self-included'] `vote by' <idList> `between' <idList> | 
-[`self-included'] `nomination of' <number> `by' <idList> `between' <idList> 
-| `allocation of' <name> `by' <idList> | [`self-included'] `directed vote by' 
-<idList> `between' 
-<idList> | `uses?' <identifier> `then' `(' <phaseList> `)' [`otherwise' `(' 
-<phaseList> `)']
+<decision> ::= [`self-included'] `vote by' <identifierList> `between' 
+<identifierList> | 
+[`self-included'] `nomination of' <number> `by' <identifierList> `between' 
+<identifierList> | `allocation of' <name> `by' <identifierList> | 
+[`self-included'] `directed vote by' <identifierList> `between' 
+<identifierList> | `uses?' <identifier> `then' `(' <phaseList> `)' [`otherwise' 
+`(' <phaseList> `)']
 
 <progression> ::= (<affiliationUpdate> | <counterUpdate>) (`for' | `of') 
-<idList>
+<identifierList>
 
 <affiliationUpdate> ::= `elimination' | (`add' | `remove') <name> | 
 [`number preserving'] `swap' <nameList> [`adding' <nameList>] | `change' <name> 
@@ -74,15 +75,21 @@
 <voteReference>) %| <identifier> <name> for a certain player's 
 %attribute
 
-<idList> ::= <identifier> \{`,' <identifier>\} [`except' <idList>]
+<identifierList> ::= <idValList> [`except' <idList>]
 
-<identifier> ::= (`everyone' | <name> | `chance' `(' <idList> `)' | `nominated' 
+<idList> ::= <identifier> \{`,' <identifier>\}
+
+<idValList> ::= <identifierVal> \{`,' <identifierVal>\}
+
+<identifierVal> ::= <identifier> [`*' <value>]
+
+<identifier> ::= `everyone' | <name> | `chance' `(' <identifierList> `)' | 
+`nominated' 
 | 
 `tied' | 
 `eliminated' | (`winner' | `loser') `of' <compReference> | (`majority' | 
 `minority') `of' <voteReference>  [<tiebreaker>] | (`highest' | `lowest' | 
-`most' | `least') <name> `(' <idList> `)' [<tiebreaker>])
-[`*' <value>]
+`most' | `least') <name> `(' <identifierList> `)' [<tiebreaker>]
 
 <compReference> ::= `competition' [<number>] 
 
