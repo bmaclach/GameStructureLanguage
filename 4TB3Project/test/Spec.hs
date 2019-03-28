@@ -1,6 +1,7 @@
 import Test.Hspec
 import Parser
 import AST
+import Prelude hiding (round)
 
 main :: IO ()
 main = hspec $ do
@@ -146,6 +147,132 @@ main = hspec $ do
                 parseGame identifierList "everyone" `shouldBe` IdList [IdVal Everyone (Num 1)] []
             it "parses an identifier list with an except list" $
                 parseGame identifierList "everyone except Brooks" `shouldBe` IdList [IdVal Everyone (Num 1)] [N "Brooks"]
-        
+        describe "competitor" $ do
+            it "parses team as Team" $
+                parseGame competitor "team" `shouldBe` Team
+            it "parses for team as Team" $
+                    parseGame competitor "for team" `shouldBe` Team
+            it "parses nothing as Individual" $
+                parseGame competitor "" `shouldBe` Individual
+        describe "competition" $ do
+            it "parses scored competition" $
+                parseGame competition "scored competition between everyone" `shouldBe` Scored Individual (IdList [IdVal Everyone (Num 1)] [])
+            it "parses placed competition" $
+                parseGame competition "competition between everyone" `shouldBe`
+                Placed Individual (IdList [IdVal Everyone (Num 1)] [])
+        describe "selfInclude" $ do
+            it "parses including self as True" $
+                parseGame selfInclude "including self" `shouldBe` True
+            it "parses nothing as False" $
+                parseGame selfInclude "" `shouldBe` False
+        describe "decision" $ do
+            it "parses a vote decision" $
+                parseGame decision "vote by everyone between everyone" `shouldBe` Vote (IdList [IdVal Everyone (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False
+            it "parses a nomination decision" $
+                parseGame decision "nomination of 2 by Brooks between everyone" `shouldBe` Nomination 2 (IdList [IdVal (N "Brooks") (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False
+            it "parses an allocation decision" $
+                parseGame decision "allocation of votes by everyone" `shouldBe` Allocation "votes" (IdList [IdVal Everyone (Num 1)] [])
+            it "parses a directed vote decision" $
+                parseGame decision "directed vote by everyone between everyone" `shouldBe` DirectedVote (IdList [IdVal Everyone (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False
+            it "parses a uses decision with no otherwise specified" $
+                parseGame decision "uses? Brooks then (vote by Brooks between nominated)" `shouldBe` Uses (N "Brooks") [Act (Dec (Vote (IdList [IdVal (N "Brooks") (Num 1)] []) (IdList [IdVal (Nominated) (Num 1)] []) False))] []
+            it "parses a uses decision with an otherwise" $
+                parseGame decision "uses? Brooks then (vote by Brooks between nominated) otherwise (elimination of Test)" `shouldBe` Uses (N "Brooks") [Act (Dec (Vote (IdList [IdVal (N "Brooks") (Num 1)] []) (IdList [IdVal (Nominated) (Num 1)] []) False))] [Prog (AU (Elimination) (IdList [IdVal (N "Test") (Num 1)] []))]
+        describe "action" $ do
+            it "parses a competition" $
+                parseGame action "competition between everyone" `shouldBe`
+                Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))
+            it "parses a decision" $
+                parseGame action "vote by everyone between everyone" `shouldBe` Dec (Vote (IdList [IdVal Everyone (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False)
+        describe "counterUpdate" $ do
+            it "parses an increase to a counter" $
+                parseGame counterUpdate "increase votes by 3" `shouldBe` Increase "votes" (Num 3)
+            it "parses a decrease to a counter" $
+                parseGame counterUpdate "decrease votes by 3" `shouldBe` Decrease "votes" (Num 3)
+            it "parses a set of a counter to a new value" $
+                parseGame counterUpdate "set votes to 0" `shouldBe` Set "votes" (Num 0)
+        describe "affiliationUpdate" $ do
+            it "parses an elimination" $
+                parseGame affiliationUpdate "elimination" `shouldBe` Elimination
+            it "parses an affiliation addition" $
+                parseGame affiliationUpdate "add test" `shouldBe` Add "test"
+            it "parses an affiliation removal" $
+                parseGame affiliationUpdate "remove test" `shouldBe` Remove "test"
+            it "parses an affiliation change" $
+                parseGame affiliationUpdate "change test to pass" `shouldBe` Change "test" "pass"
+            it "parses an affiliation swap" $
+                parseGame affiliationUpdate "swap Kucha, Ogakor" `shouldBe` Swap ["Kucha", "Ogakor"] [] False
+            it "parses a number preserving affiliation swap" $
+                parseGame affiliationUpdate "number preserving swap Kucha, Ogakor" `shouldBe` Swap ["Kucha", "Ogakor"] [] True
+            it "parses an affiliation swap with affiliation additions" $
+                parseGame affiliationUpdate "swap Manu, Kama adding Lesu" `shouldBe` Swap ["Manu", "Kama"] ["Lesu"] False
+            it "parses a merge with no merge name" $
+                parseGame affiliationUpdate "merge Kucha, Ogakor" `shouldBe` Merge ["Kucha", "Ogakor"] Nothing
+            it "parses a merge with a merge name" $
+                parseGame affiliationUpdate "merge Kucha, Ogakor to Barramundi" `shouldBe` Merge ["Kucha", "Ogakor"] (Just "Barramundi")
+        describe "progression" $ do
+            it "parses an affiliation update" $
+                parseGame progression "elimination of Brooks" `shouldBe` AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] [])
+            it "parses a counter update" $
+                parseGame progression "increase votes by 3 for Brooks" `shouldBe` CU (Increase "votes" (Num 3)) (IdList [IdVal (N "Brooks") (Num 1)] [])
+        describe "phase" $ do
+            it "parses an action" $
+                parseGame phase "competition between everyone" `shouldBe`
+                Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] [])))
+            it "parses a progression" $
+                parseGame phase "elimination of Brooks" `shouldBe` Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))
+        describe "phaseList" $ do
+            it "parses a single phase" $
+                parseGame phaseList "competition between everyone" `shouldBe`
+                [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] [])))]
+            it "parses multiple phases" $
+                parseGame phaseList "competition between everyone. elimination of Brooks" `shouldBe` [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))]
+        describe "modifier" $ do
+            it "parses a modifier for just one round" $
+                parseGame modifier "just round 2 before phase 3 insert competition between everyone" `shouldBe` Jst 2 Before 3 (Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))))
+            it "parses a modifier from one round onwards" $
+                parseGame modifier "from round 2 before phase 3 insert competition between everyone" `shouldBe` From 2 Before 3 (Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))))
+        describe "modifierList" $ do
+            it "parses a single modifier" $
+                parseGame modifierList "just round 2 before phase 3 insert competition between everyone" `shouldBe` [Jst 2 Before 3 (Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))))]
+            it "parses multiple modifiers" $
+                parseGame modifierList "just round 2 before phase 3 insert competition between everyone. from round 2 before phase 3 insert competition between everyone" `shouldBe` [Jst 2 Before 3 (Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] [])))), From 2 Before 3 (Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))))]
+        describe "round" $ do
+            it "parses a round with no repetitions or modifiers" $
+                parseGame round "competition between everyone. elimination of Brooks" `shouldBe` R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []
+            it "parses a round with repetitions but no modifiers" $
+                parseGame round "competition between everyone. elimination of Brooks repeated 9 times" `shouldBe` R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 9 []
+            it "parses a round with repetitions and modifiers" $
+                parseGame round "competition between everyone. elimination of Brooks repeated 9 times with modifications: just round 2 before phase 3 insert competition between everyone. from round 2 before phase 3 insert competition between everyone" `shouldBe` R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 9 [Jst 2 Before 3 (Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] [])))), From 2 Before 3 (Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))))]
+        describe "roundList" $ do
+            it "parses a single round" $ 
+                parseGame roundList "competition between everyone. elimination of Brooks;" `shouldBe` [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []]
+            it "parses multiple rounds" $ 
+                parseGame roundList "competition between everyone. elimination of Brooks; elimination of Test;" `shouldBe` [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 [], R [Prog (AU Elimination (IdList [IdVal (N "Test") (Num 1)] []))] 1 []]
+        describe "goal" $ do
+            it "parses a goal" $
+                parseGame goal "100 votes" `shouldBe` Gl 100 "votes"
+        describe "goalList" $ do
+            it "parses a single goal" $
+                parseGame goalList "100 votes" `shouldBe` [Gl 100 "votes"]
+            it "parses multiple goals" $
+                parseGame goalList "100 votes, 20 points" `shouldBe` [Gl 100 "votes", Gl 20 "points"]
+        describe "winCondition" $ do
+            it "parses survive" $
+                parseGame winCondition "survive" `shouldBe` Survive
+            it "parses jury member vote" $
+                parseGame winCondition "7 member jury vote" `shouldBe` Jury 7
+            it "parses final competition" $
+                parseGame winCondition "competition" `shouldBe` FinalComp Individual
+            it "parses counter goal" $
+                parseGame winCondition "reach 100 points" `shouldBe` Reach [Gl 100 "points"] Individual
+            it "parses identifier list" $
+                parseGame winCondition "highest points (everyone)" `shouldBe` Ids (IdList [IdVal (Most "points" (IdList [IdVal Everyone (Num 1)] []) Nothing) (Num 1)] []) Individual
+        describe "game" $ do
+            it "parses a game" $
+                parseGame game "Players: Brooks, Test Rounds: competition between everyone. elimination of Brooks; Win: Survive" `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []] Survive
+
+
+
 
 

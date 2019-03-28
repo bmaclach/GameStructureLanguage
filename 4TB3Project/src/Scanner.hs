@@ -1,10 +1,9 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 {- |
 This defines functions for parsing the "tokens" in the language, such as identifiers, keywords, numbers, and symbols.
 -}
 module Scanner (
-    identifier, reserved, reservedOp, number, colon, semi, commaSep, parens, newln
+    identifier, reserved, reservedOp, number, colon, semi, commaSep, parens, 
+    dot, whiteSpace
 ) where
 
 import Text.Parsec
@@ -24,8 +23,8 @@ languageDef = emptyDef {
         "all", "with", "team", "affiliation", "score", "resource", "counter", 
         "called", "starting", "at", "minimum", "maximum", "of", "just", "from",
         "before", "after", "instead", "insert", "round", "phase", "repeated",
-        "times", "scored", "competition", "between", "self-included", "vote",
-        "by", "nomination", "allocation", "directed", "uses?", "then", 
+        "times", "scored", "competition", "between", "including", "self", 
+        "vote", "by", "nomination", "allocation", "directed", "uses?", "then", 
         "otherwise", "for", "elimination", "add", "remove", "number", 
         "preserving", "swap", "adding", "change", "to", "merge", "increase", 
         "decrease", "set", "results", "except", "everyone", "chance", 
@@ -63,9 +62,8 @@ commaSep = T.commaSep1 scanner
 -- | Parses opening and closing parentheses, and returns the result of parsing in between the parentheses.
 parens = T.parens scanner
 
--- | Parses a line-end character
-newln :: (Stream s m Char) => ParsecT s u m Char
-newln = char '\n'
+-- | Parses a period '.'
+dot = T.dot scanner
 
 -- | Parses one or more spaces.
 whiteSpace = T.whiteSpace scanner

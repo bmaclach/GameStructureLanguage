@@ -7,7 +7,7 @@ module AST (
     Competition(..), Decision(..), Progression(..), AffiliationUpdate(..),
     CounterUpdate(..), IdentifierList(..), IdentifierVal(..), Identifier(..), 
     Value(..), ActRef(..), CompRef(..), VoteRef(..), AllocRef(..), 
-    Tiebreaker(..), WinCondition(..)
+    Tiebreaker(..), Goal(..), WinCondition(..)
 ) where
 
 -- | A name is represented by a string
@@ -17,7 +17,7 @@ type Name = String
 type Number = Integer
 
 -- | A game is information about the players, a list of team names, a list of rounds, and a list of win conditions
-data Game = G PlayerInfo [Round] [WinCondition] deriving (Show, Eq)
+data Game = G PlayerInfo [Round] WinCondition deriving (Show, Eq)
 
 -- | Player information includes the list of players, the list of teams, and a boolean that, if true, means the players should be randomly and evenly divided between the teams
 data PlayerInfo = PI [Player] [Name] Bool deriving (Show, Eq)
@@ -62,7 +62,7 @@ data Decision
     -- | A vote is parameterized by a list of identifiers who vote, a list of identifiers for who can be voted for, and a Boolean that, if true, means one can vote for themself.
     = Vote IdentifierList IdentifierList Bool 
     -- | A nomination is parameterized by a number of people to be nominated, an identifier for who will do the nominating, a list of identifiers for who is eligible to be nominated, and a Boolean that, if true, means one can nominate themself.
-    | Nomination Number Identifier IdentifierList Bool
+    | Nomination Number IdentifierList IdentifierList Bool
     -- | An allocation is parameterized by a name referring to the resource to be allocated, and a list of identifiers who will do the allocating.
     | Allocation Name IdentifierList
     -- | A directed vote is parameterized by a list of identifiers who vote, a list of identifiers for who can be voted for, and a Boolean that, if true, means one can vote for themself.
@@ -161,6 +161,9 @@ data AllocRef = ARef Number deriving (Show, Eq)
 -- | A tiebreaker might include an action before choosing an identifier to resolve a tie
 data Tiebreaker = Tiebreak (Maybe Action) Identifier deriving (Show, Eq)
 
+-- | A goal is a number and the name of a counter for which the number must be reached
+data Goal = Gl Number Name deriving (Show, Eq)
+
 -- | A win condition must be satisfied for a player to win the game
 data WinCondition
     -- | For when every active player left after all rounds have been completed wins 
@@ -170,7 +173,7 @@ data WinCondition
     -- | For when the winner is either a team or individual, decided by a final competition
     | FinalComp Competitor 
     -- | For when the winner is the first team or individual to reach a certain value for a certain counter
-    | Goal Name Number Competitor 
+    | Reach [Goal] Competitor 
     -- | For when the winner is either a team or individual in a given list of identifiers
     | Ids IdentifierList Competitor
     deriving (Show, Eq)

@@ -7,19 +7,38 @@ module Parser (
     parseGame, teamList, team, playerList, player, attributeList, attribute, 
     affiliation, counter, roundReference, phaseReference, timeReference,
     compReference, voteReference, allocateReference, actReference, value,
-    identifierList, idValList, idList, identifierVal, identifierP
+    identifierList, idValList, idList, identifierVal, identifierP, competitor,
+    competition, selfInclude, decision, action, counterUpdate, 
+    affiliationUpdate, progression, phase, phaseList, modifier, modifierList,
+    round, roundList, goal, goalList, winCondition, game
 ) where
 
 import Text.Parsec
 import Scanner
 import AST
 import Data.Functor.Identity
+import Prelude hiding (round)
 
 -- | This takes a string representation of a game, parses it into an AST, and returns the AST, or an error if one occurs.
 parseGame :: (Stream s Identity t) => Parsec s () a -> s -> a
 parseGame parser gametoparse = case (parse parser "" gametoparse) of
     Left e -> error $ show e
     Right ast -> ast
+
+-- | Parser for a complete game description
+game = do
+    whiteSpace
+    reserved "Players"
+    colon
+    pi <- teamList
+    reserved "Rounds"
+    colon
+    rl <- roundList
+    reserved "Win"
+    colon
+    wc <- winCondition
+    eof
+    return $ G pi rl wc
 
 -- * Player-related parsers
 
@@ -108,9 +127,157 @@ counter = do
 
 -- * Round-related parsers
 
+-- | Parses a semicolon-separated list of rounds
+roundList = endBy1 round semi
+
+-- | Parses a round, which is a phase list, a number of repititions, and maybe some modifiers
+round = do
+    pl <- phaseList
+    (n, ml) <- option (1, []) (do {reserved "repeated"
+                                  ; times <- number
+                                  ; reserved "times"
+                                  ; mods <- option [] (do {reserved "with"
+                                                      ; reserved "modifications"
+                                                      ; colon
+                                                      ; modList <- modifierList
+                                                      ; return modList})
+                                  ; return (times, mods)})
+    return $ R pl n ml
+
+-- | Parses a period-separated list of phases
+phaseList = sepBy1 phase dot
+
+-- | Parses a phase, which is either an action or progression
+phase = do {a <- action
+           ; return $ Act a}
+        <|> do {p <- progression
+               ; return $ Prog p}
+
+-- | Parses an action, which can be a competition or decision
+action = do {c <- competition
+            ; return $ Comp c}
+         <|> do {d <- decision
+                ; return $ Dec d}
+
+-- | Parses a progression, which is an update of either affiliations or counters, for a given identifier list
+progression = do {au <- affiliationUpdate
+                 ; (reserved "for" <|> reserved "of")
+                 ; il <- identifierList
+                 ; return $ AU au il}
+              <|> do {cu <- counterUpdate
+                     ; (reserved "for" <|> reserved "of")
+                     ; il <- identifierList
+                     ; return $ CU cu il}
+
+-- | Parses decisions, which can be votes, nominations, allocations, directed votes, or binary uses decisions
+decision = do {reserved "vote"
+               ; reserved "by"
+               ; voters <- identifierList
+               ; reserved "between"
+               ; votees <- identifierList
+               ; slf <- selfInclude
+               ; return $ Vote voters votees slf}
+           <|> do {reserved "nomination"
+                  ; reserved "of"
+                  ; n <- number
+                  ; reserved "by"
+                  ; nominators <- identifierList
+                  ; reserved "between"
+                  ; pool <- identifierList
+                  ; slf <- selfInclude
+                  ; return $ Nomination n nominators pool slf}
+           <|> do {reserved "allocation"
+                  ; reserved "of"
+                  ; nm <- identifier
+                  ; reserved "by"
+                  ; il <- identifierList
+                  ; return $ Allocation nm il}
+           <|> do {reserved "directed"
+                  ; reserved "vote"
+                  ; reserved "by"
+                  ; voters <- identifierList
+                  ; reserved "between"
+                  ; votees <- identifierList
+                  ; slf <- selfInclude
+                  ; return $ DirectedVote voters votees slf}
+           <|> do {reserved "uses?"
+                  ; decider <- identifierP
+                  ; reserved "then"
+                  ; pl <- parens phaseList
+                  ; opl <- option [] (do {reserved "otherwise"
+                                         ; phList <- parens phaseList
+                                         ; return phList})
+                  ; return $ Uses decider pl opl}
+
+-- | Parses "including self" as True or "" as False
+selfInclude = option False (do {reserved "including"
+                               ; reserved "self"
+                               ; return True})
+
+-- | Parser for competitions, which can be scored or not, between teams or individuals, and between certain players
+competition = do {reserved "scored"
+                 ; cmp <- competitor
+                 ; reserved "competition"
+                 ; reserved "between"
+                 ; il <- identifierList
+                 ; return $ Scored cmp il}
+              <|> do {cmp <- competitor
+                     ; reserved "competition"
+                     ; reserved "between"
+                     ; il <- identifierList
+                     ; return $ Placed cmp il}
+
 -- | Parser for competitors, either team or individual
-competitor = option Individual (do {reserved "team"
+competitor = option Individual (do {optional (reserved "for")
+                                   ; reserved "team"
                                    ; return Team})
+
+-- | Parser for an update to affiliations, which can be eliminating, adding/removing/changing an affiliation, swapping players with certain affiliations, or merging affiliations
+affiliationUpdate = do {reserved "elimination"
+                       ; return Elimination}
+                    <|> do {reserved "add"
+                           ; nm <- identifier
+                           ; return $ Add nm}
+                    <|> do {reserved "remove"
+                           ; nm <- identifier
+                           ; return $ Remove nm}
+                    <|> do {reserved "change"
+                           ; old <- identifier
+                           ; reserved "to"
+                           ; new <- identifier
+                           ; return $ Change old new}
+                    <|> do {np <- option False (do {reserved "number"
+                                                   ; reserved "preserving"
+                                                   ; return True})
+                           ; reserved "swap"
+                           ; al <- commaSep identifier
+                           ; addition <- option [] (do {reserved "adding"
+                                                       ; nl <- commaSep identifier
+                                                       ; return nl})
+                           ; return $ Swap al addition np}
+                    <|> do {reserved "merge"
+                           ; al <- commaSep identifier
+                           ; newa <- optionMaybe (do {reserved "to"
+                                                     ; nm <- identifier
+                                                     ; return nm})
+                           ; return $ Merge al newa}
+
+-- | Parser for an update to a counter, which can be an increase or decrease or setting it to a given value
+counterUpdate = do {reserved "increase"
+                   ; nm <- identifier
+                   ; reserved "by"
+                   ; val <- value
+                   ; return $ Increase nm val}
+                <|> do {reserved "decrease"
+                       ; nm <- identifier
+                       ; reserved "by"
+                       ; val <- value
+                       ; return $ Decrease nm val}
+                <|> do {reserved "set"
+                       ; nm <- identifier
+                       ; reserved "to"
+                       ; val <- value
+                       ; return $ Set nm val}
 
 -- | Parser for identifier lists, which are defined by a list of identifiers to include and a list of identifiers to exclude
 identifierList = do
@@ -235,25 +402,58 @@ value = do {n <- number
                ; ref <- actReference
                ; return $ Result ref} 
 
--- modifier = do {reserved "just"
---               ; rr <- roundReference
---               ; tr <- timeReference
---               ; pr <- phaseReference
---               ; reserved "insert"
---               ; p <- phase
---               ; return $ Jst rr tr pr p}
---            <|> do {reserved "from"
---                ; rr <- roundReference
---                ; tr <- timeReference
---                ; pr <- phaseReference
---                ; reserved "insert"
---                ; p <- phase
---                ; return $ From rr tr pr p}
+-- | Parses period-separated lists of modifiers
+modifierList = sepBy1 modifier dot
+
+-- | Parses modifiers, which are instructions to change a given phase in a given round
+modifier = do {reserved "just"
+              ; rr <- roundReference
+              ; tr <- timeReference
+              ; pr <- phaseReference
+              ; reserved "insert"
+              ; p <- phase
+              ; return $ Jst rr tr pr p}
+           <|> do {reserved "from"
+               ; rr <- roundReference
+               ; tr <- timeReference
+               ; pr <- phaseReference
+               ; reserved "insert"
+               ; p <- phase
+               ; return $ From rr tr pr p}
 
 tiebreaker = do
     reserved "tiebroken"
     return $ Tiebreak Nothing Everyone
 
+-- * Win condition-related parsers
+
+-- | Parses win conditions, which are either a goal value for a counter, survival, a jury vote, a final competition, or a list of identifiers. Wins could be either individual or teams.
+winCondition = do {reserved "survive"
+                  ; return Survive}
+               <|> do {n <- number
+                      ; reserved "member"
+                      ; reserved "jury"
+                      ; reserved "vote"
+                      ; return $ Jury n}
+               <|> do {c <- competitor
+                      ; reserved "competition"
+                      ; return $ FinalComp c}
+               <|> do {reserved "reach"
+                      ; gl <- goalList
+                      ; c <- competitor
+                      ; return $ Reach gl c}
+               <|> do {il <- identifierList
+                      ; c <- competitor
+                      ; return $ Ids il c}
+
+-- | Parses a comma-separated list of goals
+goalList = commaSep goal
+
+-- | Parses goals, which are counter names and numbers
+goal = do
+    n <- number
+    nm <- identifier
+    return $ Gl n nm
 
 -- * Helper Functions
 
