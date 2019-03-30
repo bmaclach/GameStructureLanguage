@@ -2,7 +2,7 @@ import random
 
 class Player:
 
-    def __init__(self, name, affiliations, counters):
+    def __init__(self, name, affiliations=[], counters=[]):
         self.name = name
         self.affiliations = []
         for aff in affiliations:
@@ -11,11 +11,11 @@ class Player:
         self.mins = {}
         self.maxs = {}
         for counter in counters:
-            self.counters.update(counter["counter"]: counter["starts"])
-            if "min" in counter.keys()
-                self.mins.update(counter["counter"]: counter["min"])
-            if "max" in counter.keys()
-                self.maxs.update(counter["counter"]: counter["max"])
+            self.counters.update({counter["counter"]: counter["starts"]})
+            if "min" in counter.keys():
+                self.mins.update({counter["counter"]: counter["min"]})
+            if "max" in counter.keys():
+                self.maxs.update({counter["counter"]: counter["max"]})
 
     def addAff(self, aff):
         self.affiliations.append(aff)
@@ -330,7 +330,7 @@ def swap(teams, newteams, players, numPreserve):
         for player in [x for x in players if team in x.affiliations]:
             player.removeAff(team)
             teamSize = teamSize + 1
-        teamSizeDict.update{team: teamSize}
+        teamSizeDict.update({team: teamSize})
     if numPreserve:
         randomlyDivideTeamsOfSize(teamSizeDict, players)
     else:
