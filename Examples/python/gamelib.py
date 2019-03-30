@@ -1,5 +1,225 @@
 import random
 
+class Game:
+
+    def __init__(self):
+        self.playerList = []
+        self.teamList = []
+        self.eliminated = []
+        self.voteResults = []
+        self.compResults = []
+        self.allocationResults = []
+
+    def resetResults(self):
+        self.voteResults = []
+        self.compResults = []
+        self.allocationResults = []
+
+    def getScoredTeamCompResults(self, compTeams):
+        print("Team competition between:")
+        for team in compTeams:
+            print(team)
+        compDict = {"scores": []}
+        for team in compTeams:
+            pts = int(input("What did " + team + " score in this round?\n"))
+            compDict["scores"].append({"team": team,
+                                       "score": pts})
+        sortedTeams = sorted(compDict["scores"], lambda x : x["score"])
+        compDict.update({"loser": sortedTeams[0]["team"], "winner": sortedTeams[-1]["team"]})
+        self.compResults.append(compDict)
+
+    def getScoredCompResults(self, compPlayers):
+        print("Competition between:")
+        for player in compPlayers:
+            print(player.name)
+        compDict = {"scores": []}
+        for player in compPlayers:
+            pts = int(input("What did " + player.name + " score in this round?\n"))
+            compDict["scores"].append({"player": player,
+                                       "score": pts})
+        sortedPlayers = sorted(compDict["scores"], lambda x : x["score"])
+        compDict.update({"loser": sortedTeams[0]["player"], "winner": sortedTeams[-1]["player"]})
+        self.compResults.append(compDict)
+
+    def getTeamCompResults(self, compTeams, winnerNeeded, loserNeeded):
+        print("Competition between:")
+        for team in compTeams:
+            print(team)
+        compDict = {}
+        if winnerNeeded:
+            haveWinner = False
+            while not haveWinner:
+                winName = input("Who won this round?\n")
+                if winName in compTeams:
+                    haveWinner = True
+                else:
+                    print(winName + " is not playing in this competition!")
+            compDict.update({"winner": winName})
+            if loserNeeded:
+                if len(compTeams) > 2:
+                    loserDetermined = False
+                    while not loserDetermined:
+                        loseName = input("Who lost this round?\n")
+                        if loseName != winName and loseName in compTeams:
+                            loserDetermined = True
+                        elif loseName == winName:
+                            print("Loser cannot be same as winner!\n")
+                        else: 
+                            print(loseName + " is not playing in this competition!")
+                else:
+                    for team in compTeams:
+                        if team != winName:
+                            loseName = team
+                compDict.update({"loser": loseName})
+        else:
+            loserDetermined = False
+            while not loserDetermined:
+                loseName = input("Who lost this round?\n")
+                if loseName != winName and loseName in compTeams:
+                    loserDetermined = True
+                elif loseName == winName:
+                    print("Loser cannot be same as winner!\n")
+                else: 
+                    print(loseName + " is not playing in this competition!")
+            compDict.update({"loser": loser})
+        self.compResults.append(compDict)
+
+    def getCompResults(self, compPlayers, winnerNeeded, loserNeeded):
+        print("Competition between:")
+        for player in compPlayers:
+            print(player.name)
+        playerNames = [x.name for x in compPlayers]
+        compDict = {}
+        if winnerNeeded:
+            haveWinner = False
+            while not haveWinner:
+                winName = input("Who won this round?\n")
+                if winName in playerNames:
+                    haveWinner = True
+                else:
+                    print(winName + " is not playing in this competition!")
+            for player in compPlayers:
+                if player.name == winName:
+                    winner = player
+                    compDict.update({"winner": winner})
+            if loserNeeded:
+                if len(compPlayers) > 2:
+                    loserDetermined = False
+                    while not loserDetermined:
+                        loseName = input("Who lost this round?\n")
+                        if loseName != winName and loseName in playerNames:
+                            loserDetermined = True
+                        elif loseName == winName:
+                            print("Loser cannot be same as winner!\n")
+                        else: 
+                            print(loseName + " is not playing in this competition!")
+                    for player in compPlayers:
+                        if player.name == loseName:
+                            loser = player
+                else:
+                    for player in compPlayers:
+                        if player != winner:
+                            loser = player
+                compDict.update({"loser": loser})
+        else:
+            loserDetermined = False
+            while not loserDetermined:
+                loseName = input("Who lost this round?\n")
+                if loseName != winName and loseName in playerNames:
+                    loserDetermined = True
+                elif loseName == winName:
+                    print("Loser cannot be same as winner!\n")
+                else: 
+                    print(loseName + " is not playing in this competition!")
+            for player in compPlayers:
+                if player.name == loseName:
+                    loser = player
+            compDict.update({"loser": loser})
+        self.compResults.append(compDict)
+
+    def vote(self, voters, votees, selfVote=False):
+        print("Vote between:")
+        for votee in votees:
+            print(votee.name)
+        voteeNames = [x.name for x in votees]
+        votes = []
+        voteDict = []
+        for voter in voters:
+            haveVote = False
+            while not haveVote:
+                playerVote = input("Who does " + voter.name + " vote for?\n")
+                if not selfVote and playerVote == voter.name:
+                    print("You cannot vote for yourself!")
+                elif playerVote in voteeNames:
+                    votes.append(playerVote)
+                    haveVote = True
+                else:
+                    print(playerVote + " is not eligible to be voted for!")
+        for votee in votees:
+            n = votes.count(votee.name)
+            voteDict.append({"player": votee,
+                            "votes": n})
+        self.voteResults.append(voteDict)
+
+    def allocate(self, players, allocated):
+        print("Allocation of " + allocated + ".")
+        allocDict = []
+        for player in players:
+            numAlloc = int(input("How many " + allocated + " does " + player.name + " allocate?\n"))
+            actAlloc = - player.updateCounter(- numAlloc, allocated)
+            allocDict.append({"player": player,
+                            "allocated": actAlloc})
+        self.allocateResults.append(allocDict)
+
+    def directedVote(self, voters, votees, selfVote=False):
+        print("Directed vote between:")
+        for votee in votees:
+            print(votee.name)
+        voteeNames = [x.name for x in votees]
+        forVotes = []
+        againstVotes = []
+        voteDict = []
+        for voter in voters:
+            haveVote = False
+            while not haveVote:
+                playerVote = input("Who does " + voter.name + " vote?\n")
+                if not selfVote and playerVote == voter.name:
+                    print("You cannot vote for yourself!")
+                elif playerVote in voteeNames:
+                    haveVote = True
+                else:
+                    print(playerVote + " is not eligible to be voted for!")
+            haveDecision = False
+            while not haveDecision:
+                decision = input("Is this vote for or against?\n")
+                if decision in {"for", "For", "f", "F"}:
+                    haveDecision = True
+                    forVotes.append(playerVote)
+                elif decision in {"against", "Against", "A", "a"}:
+                    haveDecision = True
+                    againstVotes.append(playerVote)
+                else:
+                    print(decision + " is not a valid answer!")
+        for votee in votees:
+            n = forVotes.count(votee.name) - againstVotes.count(votee.name)
+            voteDict.append({"player": votee,
+                            "votes": n})
+        self.voteResults.append(voteDict)
+
+    def eliminate(self, player):
+        self.eliminated.append(player)
+        self.playerList.remove(player)
+        print(player.name + " has been eliminated!")
+
+    def juryVote(self, numJurors):
+        self.vote(eliminated[(len(eliminated)-numJurors):], self.playerList)
+
+    def checkWinCondition(self, counter, goal):
+        for player in self.playerList:
+            if player.counters[counter] >= goal:
+                return True
+        return False
+
 class Player:
 
     def __init__(self, name, affiliations=[], counters=[]):
@@ -69,152 +289,6 @@ def randomlyDivideTeamsOfSize(teams, players):
             openTeams.pop(openTeams.keys()[team])
             del counts[team]
 
-def getScoredTeamCompResults(compTeams):
-    print("Team competition between:")
-    for team in compTeams:
-        print(team)
-    compDict = {"scores": []}
-    for team in compTeams:
-        pts = int(input("What did " + team + " score in this round?\n"))
-        compDict["scores"].append({"team": team,
-                                   "score": pts})
-    sortedTeams = sorted(compDict["scores"], lambda x : x["score"])
-    compDict.update({"loser": sortedTeams[0]["team"], "winner": sortedTeams[-1]["team"]})
-    compResults.append(compDict)
-
-def getScoredCompResults(compPlayers):
-    print("Competition between:")
-    for player in compPlayers:
-        print(player.name)
-    compDict = {"scores": []}
-    for player in compPlayers:
-        pts = int(input("What did " + player.name + " score in this round?\n"))
-        compDict["scores"].append({"player": player,
-                                   "score": pts})
-    sortedPlayers = sorted(compDict["scores"], lambda x : x["score"])
-    compDict.update({"loser": sortedTeams[0]["player"], "winner": sortedTeams[-1]["player"]})
-    compResults.append(compDict)
-
-def getTeamCompResults(compTeams, winnerNeeded, loserNeeded):
-    print("Competition between:")
-    for team in compTeams:
-        print(team)
-    compDict = {}
-    if winnerNeeded:
-        haveWinner = False
-        while not haveWinner:
-            winName = input("Who won this round?\n")
-            if winName in compTeams:
-                haveWinner = True
-            else:
-                print(winName + " is not playing in this competition!")
-        compDict.update({"winner": winName})
-        if loserNeeded:
-            if len(compTeams) > 2:
-                loserDetermined = False
-                while not loserDetermined:
-                    loseName = input("Who lost this round?\n")
-                    if loseName != winName and loseName in compTeams:
-                        loserDetermined = True
-                    elif loseName == winName:
-                        print("Loser cannot be same as winner!\n")
-                    else: 
-                        print(loseName + " is not playing in this competition!")
-            else:
-                for team in compTeams:
-                    if team != winName:
-                        loseName = team
-            compDict.update({"loser": loseName})
-    else:
-        loserDetermined = False
-        while not loserDetermined:
-            loseName = input("Who lost this round?\n")
-            if loseName != winName and loseName in compTeams:
-                loserDetermined = True
-            elif loseName == winName:
-                print("Loser cannot be same as winner!\n")
-            else: 
-                print(loseName + " is not playing in this competition!")
-        compDict.update({"loser": loser})
-    compResults.append(compDict)
-
-def getCompResults(compPlayers, winnerNeeded, loserNeeded):
-    print("Competition between:")
-    for player in compPlayers:
-        print(player.name)
-    playerNames = [x.name for x in compPlayers]
-    compDict = {}
-    if winnerNeeded:
-        haveWinner = False
-        while not haveWinner:
-            winName = input("Who won this round?\n")
-            if winName in playerNames:
-                haveWinner = True
-            else:
-                print(winName + " is not playing in this competition!")
-        for player in compPlayers:
-            if player.name == winName:
-                winner = player
-                compDict.update({"winner": winner})
-        if loserNeeded:
-            if len(compPlayers) > 2:
-                loserDetermined = False
-                while not loserDetermined:
-                    loseName = input("Who lost this round?\n")
-                    if loseName != winName and loseName in playerNames:
-                        loserDetermined = True
-                    elif loseName == winName:
-                        print("Loser cannot be same as winner!\n")
-                    else: 
-                        print(loseName + " is not playing in this competition!")
-                for player in compPlayers:
-                    if player.name == loseName:
-                        loser = player
-            else:
-                for player in compPlayers:
-                    if player != winner:
-                        loser = player
-            compDict.update({"loser": loser})
-    else:
-        loserDetermined = False
-        while not loserDetermined:
-            loseName = input("Who lost this round?\n")
-            if loseName != winName and loseName in playerNames:
-                loserDetermined = True
-            elif loseName == winName:
-                print("Loser cannot be same as winner!\n")
-            else: 
-                print(loseName + " is not playing in this competition!")
-        for player in compPlayers:
-            if player.name == loseName:
-                loser = player
-        compDict.update({"loser": loser})
-    compResults.append(compDict)
-
-def vote(voters, votees, selfVote=False):
-    print("Vote between:")
-    for votee in votees:
-        print(votee.name)
-    voteeNames = [x.name for x in votees]
-    votes = []
-    voteDict = []
-    for voter in voters:
-        haveVote = False
-        while not haveVote:
-            playerVote = input("Who does " + voter.name + " vote for?\n")
-            if not selfVote and playerVote == voter.name:
-                print("You cannot vote for yourself!")
-            elif playerVote in voteeNames:
-                votes.append(playerVote)
-                haveVote = True
-            else:
-                print(playerVote + " is not eligible to be voted for!")
-    for votee in votees:
-        n = votes.count(votee.name)
-        voteDict.append({"player": votee,
-                         "votes": n})
-    voteResults.append(voteDict)
-
 def nominate(nominators, numNominated, pool, selfVote=False):
     print("Nomination between:")
     for player in pool:
@@ -236,51 +310,6 @@ def nominate(nominators, numNominated, pool, selfVote=False):
     for player in pool:
         if player.name in nominated:
             player.addAff("nominated")
-
-def allocate(players, allocated):
-    print("Allocation of " + allocated + ".")
-    allocDict = []
-    for player in players:
-        numAlloc = int(input("How many " + allocated + " does " + player.name + " allocate?\n"))
-        actAlloc = - player.updateCounter(- numAlloc, allocated)
-        allocDict.append({"player": player,
-                          "allocated": actAlloc})
-    allocateResults.append(allocDict)
-
-def directedVote(voters, votees, selfVote=False):
-    print("Directed vote between:")
-    for votee in votees:
-        print(votee.name)
-    voteeNames = [x.name for x in votees]
-    forVotes = []
-    againstVotes = []
-    voteDict = []
-    for voter in voters:
-        haveVote = False
-        while not haveVote:
-            playerVote = input("Who does " + voter.name + " vote?\n")
-            if not selfVote and playerVote == voter.name:
-                print("You cannot vote for yourself!")
-            elif playerVote in voteeNames:
-                haveVote = True
-            else:
-                print(playerVote + " is not eligible to be voted for!")
-        haveDecision = False
-        while not haveDecision:
-            decision = input("Is this vote for or against?\n")
-            if decision in {"for", "For", "f", "F"}:
-                haveDecision = True
-                forVotes.append(playerVote)
-            elif decision in {"against", "Against", "A", "a"}:
-                haveDecision = True
-                againstVotes.append(playerVote)
-            else:
-                print(decision + " is not a valid answer!")
-    for votee in votees:
-        n = forVotes.count(votee.name) - againstVotes.count(votee.name)
-        voteDict.append({"player": votee,
-                         "votes": n})
-    voteResults.append(voteDict)
 
 def uses(player):
     haveDecision = False
@@ -345,23 +374,3 @@ def merge(teams, newteam, players):
 def randomDraw(pool):
     draw = random.randint(0, len(pool)-1)
     return pool[draw]
-
-def eliminate(player):
-    eliminated.append(player)
-    playerList.remove(player)
-    print(player.name + " has been eliminated!")
-
-def juryVote(numJurors):
-    vote(eliminated[(len(eliminated)-numJurors):], playerList)
-
-def checkWinCondition(counter, goal):
-    for player in playerList:
-        if player.counters[counter] >= goal:
-            return True
-    return False
-
-playerList = []
-eliminated = []
-voteResults = []
-compResults = []
-allocationResults = []
