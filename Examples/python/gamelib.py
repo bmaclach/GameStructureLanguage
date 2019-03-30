@@ -24,7 +24,7 @@ class Game:
             pts = int(input("What did " + team + " score in this round?\n"))
             compDict["scores"].append({"team": team,
                                        "score": pts})
-        sortedTeams = sorted(compDict["scores"], lambda x : x["score"])
+        sortedTeams = sorted(compDict["scores"], key=lambda x : x["score"])
         compDict.update({"loser": sortedTeams[0]["team"], "winner": sortedTeams[-1]["team"]})
         self.compResults.append(compDict)
 
@@ -37,7 +37,7 @@ class Game:
             pts = int(input("What did " + player.name + " score in this round?\n"))
             compDict["scores"].append({"player": player,
                                        "score": pts})
-        sortedPlayers = sorted(compDict["scores"], lambda x : x["score"])
+        sortedPlayers = sorted(compDict["scores"], key=lambda x : x["score"])
         compDict.update({"loser": sortedTeams[0]["player"], "winner": sortedTeams[-1]["player"]})
         self.compResults.append(compDict)
 
