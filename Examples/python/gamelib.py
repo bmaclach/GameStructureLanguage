@@ -75,13 +75,11 @@ class Game:
             loserDetermined = False
             while not loserDetermined:
                 loseName = input("Who lost this round?\n")
-                if loseName != winName and loseName in compTeams:
+                if loseName in compTeams:
                     loserDetermined = True
-                elif loseName == winName:
-                    print("Loser cannot be same as winner!\n")
                 else: 
                     print(loseName + " is not playing in this competition!")
-            compDict.update({"loser": loser})
+            compDict.update({"loser": loseName})
         self.compResults.append(compDict)
 
     def getCompResults(self, compPlayers, winnerNeeded, loserNeeded):
@@ -212,7 +210,7 @@ class Game:
         print(player.name + " has been eliminated!")
 
     def juryVote(self, numJurors):
-        self.vote(eliminated[(len(eliminated)-numJurors):], self.playerList)
+        self.vote(self.eliminated[(len(self.eliminated)-numJurors):], self.playerList)
 
     def checkWinCondition(self, counter, goal):
         for player in self.playerList:
@@ -231,7 +229,10 @@ class Player:
         self.mins = {}
         self.maxs = {}
         for counter in counters:
-            self.counters.update({counter["counter"]: counter["starts"]})
+            startVal = 0
+            if "starts" in counter.keys():
+                startVal = counter["starts"]
+            self.counters.update({counter["counter"]: startVal})
             if "min" in counter.keys():
                 self.mins.update({counter["counter"]: counter["min"]})
             if "max" in counter.keys():

@@ -9,10 +9,10 @@ def roundType1():
 
 game = Game()
 
-game.playerList.append(Player("Jose", ["Jays"], [{"counter": "points", "starts": 0}]))
-game.playerList.append(Player("Kevin", ["Jays"], [{"counter": "points", "starts": 0}]))
-game.playerList.append(Player("John", ["Yankees"], [{"counter": "points", "starts": 0}]))
-game.playerList.append(Player("Joe", ["Yankees"], [{"counter": "points", "starts": 0}]))
+game.playerList.append(Player("Jose", ["Jays"], [{"counter": "points"}]))
+game.playerList.append(Player("Kevin", ["Jays"], [{"counter": "points"}]))
+game.playerList.append(Player("John", ["Yankees"], [{"counter": "points"}]))
+game.playerList.append(Player("Joe", ["Yankees"], [{"counter": "points"}]))
 game.teamList.append("Jays")
 game.teamList.append("Yankees")
 

@@ -6,8 +6,8 @@ def roundType1():
 
 game = Game()
 
-game.playerList.append(Player("John", [], [{"counter": "sets", "starts": 0}]))
-game.playerList.append(Player("Joe", [], [{"counter": "sets", "starts": 0}]))
+game.playerList.append(Player("John", [], [{"counter": "sets"}]))
+game.playerList.append(Player("Joe", [], [{"counter": "sets"}]))
 
 roundList = [roundType1] * 7
 
