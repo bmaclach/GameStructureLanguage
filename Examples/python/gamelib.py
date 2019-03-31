@@ -123,10 +123,8 @@ class Game:
             loserDetermined = False
             while not loserDetermined:
                 loseName = input("Who lost this round?\n")
-                if loseName != winName and loseName in playerNames:
+                if loseName in playerNames:
                     loserDetermined = True
-                elif loseName == winName:
-                    print("Loser cannot be same as winner!\n")
                 else: 
                     print(loseName + " is not playing in this competition!")
             for player in compPlayers:
