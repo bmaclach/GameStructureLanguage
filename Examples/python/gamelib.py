@@ -157,6 +157,28 @@ class Game:
                             "votes": n})
         self.voteResults.append(voteDict)
 
+    def nominate(self, nominators, numNominated, pool, selfVote=False):
+        print("Nomination between:")
+        for player in pool:
+            print(player.name)
+        poolNames = [x.name for x in pool]
+        nominated = [x.name for x in self.playerList if "nominated" in x.affiliations]
+        for nominator in nominators:
+            for i in range(numNominated):
+                haveNomination = False
+                while not haveNomination:
+                    nominee = input("Who does " + nominator.name + " nominate?\n")
+                    if not selfVote and nominee == nominator.name:
+                        print("You can't nominate yourself!")
+                    elif nominee in poolNames and nominee not in nominated:
+                        nominated.append(nominee)
+                        haveNomination = True
+                    else:
+                        print(nominee + " is not eligible for nomination!")
+        for player in pool:
+            if player.name in nominated:
+                player.addAff("nominated")
+
     def allocate(self, players, allocated):
         print("Allocation of " + allocated + ".")
         allocDict = []
@@ -237,10 +259,12 @@ class Player:
                 self.maxs.update({counter["counter"]: counter["max"]})
 
     def addAff(self, aff):
-        self.affiliations.append(aff)
+        if aff not in self.affiliations:
+            self.affiliations.append(aff)
 
     def removeAff(self, aff):
-        self.affiliations.remove(aff)
+        if aff in self.affiliations:
+            self.affiliations.remove(aff)
 
     def updateCounter(self, change, counter):
         if counter in self.mins.keys():
@@ -287,28 +311,6 @@ def randomlyDivideTeamsOfSize(teams, players):
         if counts[team] == openTeams[openTeams.keys()[team]]:
             openTeams.pop(openTeams.keys()[team])
             del counts[team]
-
-def nominate(nominators, numNominated, pool, selfVote=False):
-    print("Nomination between:")
-    for player in pool:
-        print(player.name)
-    poolNames = [x.name for x in pool]
-    nominated = [x for x in playerList if "nominated" in x.affiliations]
-    for nominator in nominators:
-        for i in range(numNominated):
-            haveNomination = False
-            while not haveNomination:
-                nominee = input("Who does " + nominator.name + " nominate?\n")
-                if not selfVote and nominee == nominator.name:
-                    print("You can't nominate yourself!")
-                elif nominee in poolNames and nominee not in nominated:
-                    nominated.append(nominee)
-                    haveNomination = True
-                else:
-                    print(nominee + " is not eligible for nomination!")
-    for player in pool:
-        if player.name in nominated:
-            player.addAff("nominated")
 
 def uses(player):
     haveDecision = False
