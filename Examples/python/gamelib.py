@@ -8,12 +8,12 @@ class Game:
         self.eliminated = []
         self.voteResults = []
         self.compResults = []
-        self.allocationResults = []
+        self.allocateResults = []
 
     def resetResults(self):
         self.voteResults = []
         self.compResults = []
-        self.allocationResults = []
+        self.allocateResults = []
 
     def getScoredTeamCompResults(self, compTeams):
         print("Team competition between:")
