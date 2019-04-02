@@ -308,7 +308,81 @@ main = hspec $ do
         describe "applyModifiers" $ do
             it "applies all modifiers to all rounds in a game" $
                 applyModifiers exGame `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [exPhase1, exPhase2] 7 [], R [exPhase3, exPhase1, exPhase2] 3 [], R [exPhase4, exPhase1] 3 [], R [exPhase4, exPhase3] 1 [], R [exPhase4, exPhase2, exPhase1] 3 []] Survive
-
+        describe "updateCompInfo" $ do
+            it "appends to CompInfo if number not present" $
+                updateCompInfo [(1, False, False), (2, True, False)] (3, True, True) `shouldBe` [(1, False, False), (2, True, False), (3, True,True)]
+            it "updates existing info if number is present" $
+                updateCompInfo [(1, True, False), (2, True, False)] (1, False, True) `shouldBe` [(1, True, True), (2, True, False)]
+        describe "combineCompInfo" $ do
+            it "properly combines two CompInfos" $
+                combineCompInfo [(1, True, False), (2, True, False)] [(3, True, True), (1, False, True)] `shouldBe` [(1, True, True), (2, True, False), (3, True,True)]
+            it "returns first list if second is empty" $
+                combineCompInfo [(1, True, False), (2, True, False)] [] `shouldBe` [(1, True, False), (2, True, False)]
+            it "returns second list if first is empty" $
+                combineCompInfo [] [(1, True, False), (2, True, False)] `shouldBe` [(1, True, False), (2, True, False)]
+        describe "getCompRefId" $ do
+            it "adds to CompInfo if winner encountered" $
+                getCompRefId (Winner (CRef 2)) 3 False `shouldBe` [(2, True, False)]
+            it "adds to CompInfo if winner encountered with 0 index" $
+                getCompRefId (Winner (CRef 0)) 3 False `shouldBe` [(3, True, False)]
+            it "adds to CompInfo if loser encountered" $
+                getCompRefId (Loser (CRef 2)) 3 False `shouldBe` [(2, False, True)]
+            it "adds to CompInfo if loser encountered with 0 index" $
+                getCompRefId (Loser (CRef 0)) 3 False `shouldBe` [(3, False, True)]
+            it "adds to CompInfo if Chance encountered" $
+                getCompRefId (Chance (IdList [IdVal (Winner (CRef 2)) (Num 1)] [])) 3 False 
+                    `shouldBe` [(2, True, False)]
+            it "adds to CompInfo if Majority encountered with tiebreaker" $
+                getCompRefId (Majority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
+            it "does not add to CompInfo if Majority with tiebreaker with index 0 is encountered" $
+                getCompRefId (Majority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
+            it "adds to CompInfo if Minority encountered with tiebreaker" $
+                getCompRefId (Minority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
+            it "does not add to CompInfo if Minority with tiebreaker with index 0 is encountered" $
+                getCompRefId (Minority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
+            it "adds to CompInfo if Most with no tiebreaker encountered" $
+                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False `shouldBe` [(2, True, False)]
+            it "adds to CompInfo if Most with tiebreaker encountered" $
+                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
+            it "does not add tiebreaker to CompInfo if Most with tiebreaker with index 0 is encountered" $
+                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
+            it "adds to CompInfo if Least with no tiebreaker encountered" $
+                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False `shouldBe` [(2, True, False)]
+            it "adds to CompInfo if Least with tiebreaker encountered" $
+                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
+            it "does not add tiebreaker to CompInfo if Least with tiebreaker with index 0 is encountered" $
+                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
+        describe "getCompRefIdentifiers" $
+            it "adds info from list of identifiers to CompInfo" $
+                getCompRefIdentifiers [Winner (CRef 2), Everyone, Loser (CRef 2), N "Brooks"] 3 False `shouldBe` [(2, True, True)]
+        describe "getCompRefIdVals" $
+            it "adds info from list of IdentifierVals to CompInfo" $
+                getCompRefIdVals [IdVal (Winner (CRef 2)) (Num 1), IdVal Everyone (Num 1), IdVal (Loser (CRef 2)) (Num 1), IdVal (N "Brooks") (Num 1)] 3 False `shouldBe` [(2, True, True)]
+        describe "getCompRefIdList" $
+            it "adds info from IdentifierList to CompInfo" $
+                getCompRefIdList (IdList [IdVal (Winner (CRef 2)) (Num 1), IdVal Everyone (Num 1), IdVal (Loser (CRef 2)) (Num 1), IdVal (N "Brooks") (Num 1)] [Winner (CRef 1), Everyone, Loser (CRef 1), N "Brooks"]) 3 False `shouldBe` [(2, True, True), (1, True, True)]
+        describe "getCompRefs" $ do
+            it "extracts CompInfo from scored comp" $
+                getCompRefs [Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)])))] 2 `shouldBe` [(1, True, False)]
+            it "extracts CompInfo from placed comp" $    
+                getCompRefs [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)])))] 2 `shouldBe` [(1, True, False)]
+            it "extracts CompInfo from Vote" $
+                getCompRefs [Act (Dec (Vote (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2 `shouldBe` [(1, True, True)]
+            it "extracts CompInfo from Nomination" $
+                getCompRefs [Act (Dec (Nomination 2 (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2 `shouldBe` [(1, True, True)]
+            it "extracts CompInfo from Allocation" $
+                getCompRefs [Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)])))] 2 `shouldBe` [(1, False, True)]
+            it "extracts CompInfo from DirectedVote" $
+                getCompRefs [Act (Dec (DirectedVote (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2 `shouldBe` [(1, True, True)]
+            it "extracts CompInfo from Uses" $
+                getCompRefs [Act (Dec (Uses (Winner (CRef 1)) [] []))] 2 `shouldBe` [(1, True, False)]
+            it "extracts CompInfo from AffiliationUpdate" $
+                getCompRefs [Prog (AU Elimination (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]))] 2 `shouldBe` [(1, False, True)]
+            it "extracts CompInfo from CounterUpdate" $
+                getCompRefs [Prog (CU (Increase "votes" (Num 3)) (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]))] 2 `shouldBe` [(1, False, True)]
+            it "increases competition counter when scored and placed competitions are encountered" $
+                getCompRefs [Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]))), Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 0)]))), Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [Loser (CRef 0)])))] 1 `shouldBe` [(1, True, False), (2, True, False), (3, False, True)]
+            
 
 
 

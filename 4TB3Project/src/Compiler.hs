@@ -2,7 +2,7 @@
 This provides functions for compiling an AST into a python program that runs the game.
 -}
 module Compiler (
-    applyModifiers, applyRoundModifiers, applyModifier, addPhaseToPhaseList, addPhaseToRound, remove0Rounds
+    CompInfo, applyModifiers, applyRoundModifiers, applyModifier, addPhaseToPhaseList, addPhaseToRound, remove0Rounds, updateCompInfo, combineCompInfo, getCompRefId, getCompRefIdentifiers, getCompRefIdVals, getCompRefIdList, getCompRefs
 ) where
 
 import AST
@@ -46,9 +46,93 @@ addPhaseToRound newp tr n (R pl rep (m:ml)) = R (addPhaseToPhaseList pl newp tr 
 -- optimizeCompsRounds [] = []
 -- optimizeCompsRounds ((R ps n ms):rs) = (R (optimizeCompsPhases ps ms) n ms) : optimizeCompsRounds rs
 
--- optimizeCompsPhases :: [Phase] -> [Modifier] -> [(Int, Bool, Bool)]
--- optimizeCompsPhases 
+-- | Competition information is a number for the index of the competition in the round, a boolean for if it is needed to know the winner, and a boolean for if it is needed to know the loser
+type CompInfo = [(Number, Bool, Bool)]
 
+getCompRefs :: [Phase] -> Number -> CompInfo
+getCompRefs [] _ = []
+getCompRefs ((Act (Comp (Scored _ il))):pl) n = combineCompInfo
+    (getCompRefIdList il n False) (getCompRefs pl (n+1))
+getCompRefs ((Act (Comp (Placed _ il))):pl) n = combineCompInfo
+    (getCompRefIdList il n False) (getCompRefs pl (n+1)) 
+getCompRefs ((Act (Dec (Vote il1 il2 _))):pl) n = combineCompInfo
+    (combineCompInfo (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
+    (getCompRefs pl n)
+getCompRefs ((Act (Dec (Nomination _ il1 il2 _))):pl) n = combineCompInfo
+    (combineCompInfo (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
+    (getCompRefs pl n)
+getCompRefs ((Act (Dec (Allocation _ il))):pl) n = combineCompInfo  
+    (getCompRefIdList il n False) (getCompRefs pl n)
+getCompRefs ((Act (Dec (DirectedVote il1 il2 _))):pl) n = combineCompInfo
+    (combineCompInfo (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
+    (getCompRefs pl n)
+getCompRefs ((Act (Dec (Uses id _ _))):pl) n = combineCompInfo 
+    (getCompRefId id n False) (getCompRefs pl n)
+getCompRefs ((Prog (AU _ il)):pl) n = combineCompInfo (getCompRefIdList il n False) 
+    (getCompRefs pl n)
+getCompRefs ((Prog (CU _ il)):pl) n = combineCompInfo (getCompRefIdList il n False) 
+    (getCompRefs pl n)
+
+-- | Extracts CompInfo from the include and exclude lists of an IdList and combines the CompInfos into a single CompInfo
+getCompRefIdList :: IdentifierList -> Number -> Bool -> CompInfo
+getCompRefIdList (IdList idvl il) n t = combineCompInfo (getCompRefIdVals idvl n t) (getCompRefIdentifiers il n t)
+
+-- | Looks through a list of IdentifierVals for references to competition winners or losers, and stores the info in a CompInfo
+getCompRefIdVals :: [IdentifierVal] -> Number -> Bool -> CompInfo
+getCompRefIdVals [] n t = []
+getCompRefIdVals ((IdVal id _):il) n t = combineCompInfo (getCompRefId id n t) (getCompRefIdVals il n t)
+
+-- | Looks through a list of identifiers for references to competition winners or losers, and stores the info in a CompInfo
+getCompRefIdentifiers :: [Identifier] -> Number -> Bool -> CompInfo
+getCompRefIdentifiers [] n t = []
+getCompRefIdentifiers (id:ids) n t = combineCompInfo (getCompRefId id n t) (getCompRefIdentifiers ids n t)
+
+-- | Extracts references to competition winners or losers from identifiers and stores the info in a CompInfo
+getCompRefId :: Identifier -> Number -> Bool -> CompInfo
+getCompRefId (Winner (CRef num)) n t = if not (t && num == 0)
+    then [(compnum, True, False)]
+    else []
+        where compnum = if num == 0 then n else num
+getCompRefId (Loser (CRef num)) n t = if not (t && num == 0) 
+    then [(compnum, False, True)]
+    else []
+        where compnum = if num == 0 then n else num
+getCompRefId (Chance il) n t = getCompRefIdList il n t
+getCompRefId (Majority _ (Just (Tiebreak _ id))) n t = getCompRefId id n True
+getCompRefId (Minority _ (Just (Tiebreak _ id))) n t = getCompRefId id n True
+getCompRefId (Most _ il Nothing) n t = getCompRefIdList il n t
+getCompRefId (Most _ il (Just (Tiebreak _ id))) n t = combineCompInfo 
+    (getCompRefIdList il n t) (getCompRefId id n True)
+getCompRefId (Least _ il Nothing) n t = getCompRefIdList il n t
+getCompRefId (Least _ il (Just (Tiebreak _ id))) n t = combineCompInfo 
+    (getCompRefIdList il n t) (getCompRefId id n True)
+getCompRefId id n t = []
+
+-- -- | Sets the boolean in CompInfo for whether a winner is needed to true for a given competition number
+-- setWinnerNeeded :: CompInfo -> Number -> CompInfo
+-- setWinnerNeeded [] n = [(n, True, False)]
+-- setWinnerNeeded (ci@(num, wn, ln):cis) n = if n == num
+--     then (num, True, ln):cis
+--     else ci : (setWinnerNeeded cis n)
+
+-- -- | Sets the boolean in CompInfo for whether a loser is needed to true for a given competition number
+-- setLoserNeeded :: CompInfo -> Number -> CompInfo
+-- setLoserNeeded [] n = [(n, False, True)]
+-- setLoserNeeded (ci@(num, wn, ln):cis) n = if n == num
+--     then (num, wn, True):cis
+--     else ci : (setWinnerNeeded cis n)
+
+-- | Combines two CompInfos by updating one CompInfo with each element from the other CompInfo
+combineCompInfo :: CompInfo -> CompInfo -> CompInfo
+combineCompInfo ci [] = ci
+combineCompInfo ci1 (ci:cis) = combineCompInfo (updateCompInfo ci1 ci) cis
+
+-- | Updates a CompInfo with a single CompInfo element by comparing the numbers, performing "or" on the booleans if the Numbers are the same, or simply appending to the CompInfo if it does not contain the Number in the single element
+updateCompInfo :: CompInfo -> (Number, Bool, Bool) -> CompInfo
+updateCompInfo [] ci = [ci]
+updateCompInfo (ci@(num, wn, ln):cis) ci2@(n, wn2, ln2) = if num == n
+    then (num, wn || wn2, ln || ln2) : cis
+    else ci : (updateCompInfo cis ci2)
 
 -- * Helper Functions
 
