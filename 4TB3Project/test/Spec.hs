@@ -1,7 +1,17 @@
 import Test.Hspec
 import Parser
 import AST
+import Compiler
 import Prelude hiding (round)
+
+exPhase1, exPhase2, exPhase3, exPhase4 :: Phase
+exPhase1 = Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [])))
+exPhase2 = Prog (CU (Increase "votes" (Num 3)) (IdList [IdVal (N "Brooks") (Num 1)] []))
+exPhase3 = Prog (AU Elimination (IdList [IdVal (N "Test") (Num 1)] []))
+exPhase4 = Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [])))
+
+exGame :: Game
+exGame = G (PI [P "Brooks" [], P "Test" []] [] False) [R [exPhase1, exPhase2] 10 [From 8 Before 1 exPhase3], R [exPhase4, exPhase1] 7 [Jst 4 During 2 exPhase3, From 5 After 1 exPhase2]] Survive
 
 main :: IO ()
 main = hspec $ do
@@ -271,7 +281,33 @@ main = hspec $ do
         describe "game" $ do
             it "parses a game" $
                 parseGame game "Players: Brooks, Test Rounds: competition between everyone. elimination of Brooks; Win: Survive" `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []] Survive
-
+    describe "Compiler" $ do
+        describe "remove0Rounds" $ do
+            it "removes rounds with 0 repetitions" $
+                remove0Rounds [R [] 1 [], R [] 0 [], R [] 2 []] `shouldBe` [R [] 1 [], R [] 2 []]
+        describe "addPhaseToPhaseList" $ do 
+            it "inserts a phase before" $
+                addPhaseToPhaseList [exPhase1, exPhase2, exPhase3] exPhase4 Before 2 `shouldBe` [exPhase1, exPhase4, exPhase2, exPhase3] 
+            it "inserts a phase after" $
+                addPhaseToPhaseList [exPhase1, exPhase2, exPhase3] exPhase4 After 2 `shouldBe` [exPhase1, exPhase2, exPhase4, exPhase3]
+            it "inserts a phase instead of" $
+                addPhaseToPhaseList [exPhase1, exPhase2, exPhase3] exPhase4 During 2 `shouldBe` [exPhase1, exPhase4, exPhase3]
+        describe "addPhaseToRound" $ do
+            it "adds a phase to a round and removes a modifier" $
+                addPhaseToRound exPhase4 During 2 (R [exPhase1, exPhase2, exPhase3] 1 [Jst 3 During 2 exPhase4, From 5 During 1 exPhase4]) `shouldBe` (R [exPhase1, exPhase4, exPhase3] 1 [From 5 During 1 exPhase4])
+        describe "applyModifier" $ do
+            it "applies a 'just' modifier to a round" $
+                applyModifier (R [exPhase1, exPhase2, exPhase3] 5 [Jst 8 Before 2 exPhase4]) 5 `shouldBe` [R [exPhase1, exPhase2, exPhase3] 2 [], R [exPhase1, exPhase4, exPhase2, exPhase3] 1 [], R [exPhase1, exPhase2, exPhase3] 2 []]
+            it "applies a 'from' modifier to a round" $
+                applyModifier (R [exPhase1, exPhase2, exPhase3] 5 [From 8 Before 2 exPhase4]) 5 `shouldBe` [R [exPhase1, exPhase2, exPhase3] 2 [], R [exPhase1, exPhase4, exPhase2, exPhase3] 3 []]
+        describe "applyRoundModifiers" $ do
+            it "applies a 'just' modifier to a list of rounds" $
+                applyRoundModifiers 0 [R [exPhase1, exPhase2, exPhase3] 2 [Jst 3 Before 2 exPhase4], R [exPhase1, exPhase4, exPhase2, exPhase3] 3 [Jst 3 Before 2 exPhase4]] `shouldBe` [R [exPhase1, exPhase2, exPhase3] 2 [], R [exPhase1, exPhase4, exPhase2, exPhase3] 0 [], R [exPhase1, exPhase4, exPhase4, exPhase2, exPhase3] 1 [], R [exPhase1, exPhase4, exPhase2, exPhase3] 2 []]
+            it "applies a 'from' modifier to a list of rounds" $
+                applyRoundModifiers 0 [R [exPhase1, exPhase2, exPhase3] 2 [From 4 During 1 exPhase4], R [exPhase1, exPhase4, exPhase2, exPhase3] 3 [From 4 During 1 exPhase4], R [exPhase1, exPhase2, exPhase3] 2 [From 4 During 1 exPhase4]] `shouldBe` [R [exPhase1, exPhase2, exPhase3] 2 [], R [exPhase1, exPhase4, exPhase2, exPhase3] 1 [], R [exPhase4, exPhase4, exPhase2, exPhase3] 2 [], R [exPhase4, exPhase2, exPhase3] 2 []]
+        describe "applyModifiers" $ do
+            it "applies all modifiers to all rounds in a game" $
+                applyModifiers exGame `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [exPhase1, exPhase2] 7 [], R [exPhase3, exPhase1, exPhase2] 3 [], R [exPhase4, exPhase1] 3 [], R [exPhase4, exPhase3] 1 [], R [exPhase4, exPhase2, exPhase1] 3 []] Survive
 
 
 

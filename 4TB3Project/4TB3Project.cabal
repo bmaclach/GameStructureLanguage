@@ -24,7 +24,8 @@ library
   exposed-modules:
       Scanner,
       AST,
-      Parser
+      Parser,
+      Compiler
   other-modules:
       Paths_4TB3Project
   hs-source-dirs:
