@@ -6,10 +6,13 @@ module Compiler (
     addPhaseToPhaseList, addPhaseToRound, remove0Rounds, updateCompInfo,
     combineCompInfo, getCompRefId, getCompRefIdentifiers, getCompRefIdVals,
     getCompRefIdList, getCompRefs, updateComp, updatePhaseComps, 
-    updateRoundComps, updateComps
+    updateRoundComps, updateComps, isNameTaken, getNamesFromPlayerList, 
+    getAllNames, getAffsFromPhaseList, getAffsFromRound, getAffsFromAttList, 
+    getAffsFromPlayerList, getAllAffiliations
 ) where
 
 import AST
+import Data.List (nub)
 
 -- * Functions for applying modifiers
 
@@ -133,20 +136,6 @@ getCompRefId (Least _ il (Just (Tiebreak _ id))) n t = combineCompInfo
     (getCompRefIdList il n t) (getCompRefId id n True)
 getCompRefId id n t = []
 
--- -- | Sets the boolean in CompInfo for whether a winner is needed to true for a given competition number
--- setWinnerNeeded :: CompInfo -> Number -> CompInfo
--- setWinnerNeeded [] n = [(n, True, False)]
--- setWinnerNeeded (ci@(num, wn, ln):cis) n = if n == num
---     then (num, True, ln):cis
---     else ci : (setWinnerNeeded cis n)
-
--- -- | Sets the boolean in CompInfo for whether a loser is needed to true for a given competition number
--- setLoserNeeded :: CompInfo -> Number -> CompInfo
--- setLoserNeeded [] n = [(n, False, True)]
--- setLoserNeeded (ci@(num, wn, ln):cis) n = if n == num
---     then (num, wn, True):cis
---     else ci : (setWinnerNeeded cis n)
-
 -- | Combines two CompInfos by updating one CompInfo with each element from the other CompInfo
 combineCompInfo :: CompInfo -> CompInfo -> CompInfo
 combineCompInfo ci [] = ci
@@ -159,13 +148,71 @@ updateCompInfo (ci@(num, wn, ln):cis) ci2@(n, wn2, ln2) = if num == n
     then (num, wn || wn2, ln || ln2) : cis
     else ci : (updateCompInfo cis ci2)
 
--- * Helper Functions
+-- * Functions for updating and checking Identifiers
 
-gameRounds :: Game -> [Round]
-gameRounds (G _ rs _) = rs
+-- | Extracts all player names from a Game
+getAllNames :: Game -> [Name]
+getAllNames (G (PI pl _ _) _ _) = getNamesFromPlayerList pl
+
+-- | Extracts player names from a list of Players
+getNamesFromPlayerList :: [Player] -> [Name]
+getNamesFromPlayerList [] = []
+getNamesFromPlayerList ((P nm atl):pl) = if nm `elem` (getNamesFromPlayerList pl) 
+    then error ("Multiple players named " ++ nm ++ ". Unique names required")
+    else nm : (getNamesFromPlayerList pl)
+
+-- | Extracts all affiliation names from a Game and checks to ensure no affiliation names conflict with player names, which are passed in a Name list
+getAllAffiliations :: Game -> [Name] -> [Name]
+getAllAffiliations (G (PI pl tl _) rl _) pn = if or (map (isNameTaken pn) tl) 
+    then error "Player and affiliation have same name. Unique names required."
+    else nub $ "nominated" : (getAffsFromPlayerList pl pn ++ tl ++ concat (map ((flip getAffsFromRound) pn) rl))
+
+-- | Extracts affiliations from a player list and stores them in a list, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
+getAffsFromPlayerList :: [Player] -> [Name] -> [Name]
+getAffsFromPlayerList [] pn = []
+getAffsFromPlayerList ((P _ atl):pl) pn = getAffsFromAttList atl pn ++ getAffsFromPlayerList pl pn
+
+-- | Extracts affiliations from an attribute list and stores them in a list, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
+getAffsFromAttList :: [Attribute] -> [Name] -> [Name]
+getAffsFromAttList [] pn = []
+getAffsFromAttList ((Affiliation nm):atl) pn = if isNameTaken pn nm
+    then error "Player and affiliation have same name. Unique names required."
+    else nm : getAffsFromAttList atl pn
+getAffsFromAttList (at:atl) pn = getAffsFromAttList atl pn
+
+-- | Extracts affiliations from a round, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
+getAffsFromRound :: Round -> [Name] -> [Name]
+getAffsFromRound (R pl _ _) pn = getAffsFromPhaseList pl pn
+
+-- | Extracts affiliations from a phase list, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
+getAffsFromPhaseList :: [Phase] -> [Name] -> [Name]
+getAffsFromPhaseList [] _ = []
+getAffsFromPhaseList ((Prog (AU (Add nm) _)):pl) pn = if isNameTaken pn nm
+    then error "Player and affiliation have same name. Unique names required."
+    else nm : (getAffsFromPhaseList pl pn)
+getAffsFromPhaseList ((Prog (AU (Change _ nm) _)):pl) pn = if isNameTaken pn nm
+    then error "Player and affiliation have same name. Unique names required."
+    else nm : (getAffsFromPhaseList pl pn)
+getAffsFromPhaseList ((Prog (AU (Swap _ newnms False) _)):pl) pn = if or (map (isNameTaken pn) newnms)
+    then error "Player and affiliation have same name. Unique names required."
+    else newnms ++ (getAffsFromPhaseList pl pn)
+getAffsFromPhaseList ((Prog (AU (Merge _ nm) _)):pl) pn = 
+    case nm of Nothing -> "merged" : (getAffsFromPhaseList pl pn)
+               Just nm -> if isNameTaken pn nm 
+                            then error "Player and affiliation have same name. Unique names required."
+                            else nm : (getAffsFromPhaseList pl pn)
+getAffsFromPhaseList ((Act (Dec (Uses _ ifpl elsepl))):pl) pn = 
+    getAffsFromPhaseList ifpl pn ++ getAffsFromPhaseList elsepl pn
+getAffsFromPhaseList (p:pl) pn = getAffsFromPhaseList pl pn
+
+-- * Helper Functions
 
 -- | Takes a list of rounds and removes those that occur 0 times
 remove0Rounds :: [Round] -> [Round]
 remove0Rounds [] = []
 remove0Rounds ((R _ 0 _):rs) = remove0Rounds rs
 remove0Rounds (r:rs) = r : remove0Rounds rs
+
+-- | Returns true if the given Name is in the given list of Names
+isNameTaken :: [Name] -> Name -> Bool
+isNameTaken nl nm = nm `elem` nl

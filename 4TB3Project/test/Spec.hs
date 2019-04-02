@@ -398,6 +398,51 @@ main = hspec $ do
         describe "updateComps" $ do
             it "updates all Placed competitions in a Game" $
                 updateComps (G (PI [] [] False) [R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) True True))] 5 [], R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 1)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 1)) (Num 1)] []) True True))] 3 []] Survive) `shouldBe` G (PI [] [] False) [R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) False False))] 5 [], R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 1)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 1)) (Num 1)] []) False False))] 3 []] Survive
+        describe "isNameTaken" $ do
+            it "returns true if Name is taken" $
+                isNameTaken ["Brooks"] "Brooks" `shouldBe` True
+            it "returns false if Name is not taken" $
+                isNameTaken ["Test"] "Brooks" `shouldBe` False
+        describe "getNamesFromPlayerList" $ do
+            it "returns names from player list" $
+                getNamesFromPlayerList [P "Brooks" [], P "Test" []] `shouldBe` ["Brooks", "Test"]
+        describe "getAllNames" $ do
+            it "returns all player names in a game" $
+                getAllNames (G (PI [P "Brooks" [], P "Test" []] [] False) [] Survive) `shouldBe` ["Brooks", "Test"]
+        describe "getAffsFromPhaseList" $ do
+            it "returns affiliations introduced in an Add affiliation update" $
+                getAffsFromPhaseList [Prog (AU (Add "Jays") (IdList [] []))] [] `shouldBe` ["Jays"]
+            it "returns affiliations introduced in a Change affiliation update" $
+                getAffsFromPhaseList [Prog (AU (Change "HOH" "houseguest") (IdList [] []))] [] `shouldBe` ["houseguest"]
+            it "returns affiliations introduced in a Swap affiliation update" $
+                getAffsFromPhaseList [Prog (AU (Swap [] ["Kucha", "Ogakor"] False) (IdList [] []))] [] `shouldBe` ["Kucha", "Ogakor"]
+            it "returns affiliations introduced in a Merge affiliation update" $
+                getAffsFromPhaseList [Prog (AU (Merge [] (Just "Barramundi")) (IdList [] []))] [] `shouldBe` ["Barramundi"]
+            it "returns affiliations introduced in a Merge with no new affiliation specified" $
+                getAffsFromPhaseList [Prog (AU (Merge [] Nothing) (IdList [] []))] [] `shouldBe` ["merged"]
+            it "returns affiliations from the 'then' branch of a Uses" $
+                getAffsFromPhaseList [Act (Dec (Uses (N "Brooks") [Prog (AU (Add "Jays") (IdList [] []))] []))] [] `shouldBe` ["Jays"]
+            it "returns affiliations from the 'otherwise' branch of a Uses" $
+                getAffsFromPhaseList [Act (Dec (Uses (N "Brooks") [] [Prog (AU (Add "Jays") (IdList [] []))]))] [] `shouldBe` ["Jays"]
+            it "returns affiliations from phase lists with multiple entries" $
+                getAffsFromPhaseList [Prog (AU (Add "Jays") (IdList [] [])), Prog (AU (Change "HOH" "houseguest") (IdList [] []))] [] `shouldBe` ["Jays", "houseguest"]
+        describe "getAffsFromAttList" $ do
+            it "does not get names from counters" $
+                getAffsFromAttList [Counter "votes" Nothing Nothing Nothing] [] `shouldBe` []
+            it "returns name of affiliation" $
+                getAffsFromAttList [Affiliation "Jays"] [] `shouldBe` ["Jays"]
+            it "returns names of multiple affiliations" $
+                getAffsFromAttList [Affiliation "Jays", Counter "votes" Nothing Nothing Nothing, Affiliation "Yankees"] [] `shouldBe` ["Jays", "Yankees"]
+        describe "getAffsFromPlayerList" $ do
+            it "returns names of a player's affiliations" $
+                getAffsFromPlayerList [P "Brooks" [Affiliation "Great"]] [] `shouldBe` ["Great"]
+            it "returns names of multiple player's affiliations" $
+                getAffsFromPlayerList [P "Brooks" [Affiliation "Great"], P "Test" [Affiliation "Boring"]] [] `shouldBe` ["Great", "Boring"]
+        describe "getAllAffiliations" $ do
+            it "returns all affiliations in a game plus 'nominated'" $
+                getAllAffiliations (G (PI [P "Brooks" [Affiliation "Jays"], P "Test" [Affiliation "Yankees"]] ["Jays", "Yankees"] False) [R [Prog (AU (Add "Kucha") (IdList [] [])), Prog (AU (Add "Jays") (IdList [] []))] 5 []] Survive) [] `shouldBe` ["nominated", "Jays", "Yankees", "Kucha"]
+            
+
             
 
 
