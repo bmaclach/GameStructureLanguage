@@ -54,8 +54,8 @@ data Action = Comp Competition | Dec Decision deriving (Show, Eq)
 data Competitor = Team | Individual deriving (Show, Eq)
 
 -- | A competition is either scored or placed (i.e. first place, second place, etc.)
--- A competition is parameterized by whether it is played between teams or individuals, and by the identifiers for the players who compete.
-data Competition = Scored Competitor IdentifierList | Placed Competitor IdentifierList deriving (Show, Eq)
+-- A competition is parameterized by whether it is played between teams or individuals, and by the identifiers for the players who compete. The booleans represent whether it is needed to know the winner (True if yes) and loser (True if yes), respectively.
+data Competition = Scored Competitor IdentifierList | Placed Competitor IdentifierList Bool Bool deriving (Show, Eq)
 
 -- | A decision is either a vote, nomination, allocation, directed vote, or a binary decision on whether something is used.
 data Decision 

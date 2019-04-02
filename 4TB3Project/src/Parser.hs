@@ -225,7 +225,7 @@ competition = do {reserved "scored"
                      ; reserved "competition"
                      ; reserved "between"
                      ; il <- identifierList
-                     ; return $ Placed cmp il}
+                     ; return $ Placed cmp il True True}
 
 -- | Parser for competitors, either team or individual
 competitor = option Individual (do {optional (reserved "for")
