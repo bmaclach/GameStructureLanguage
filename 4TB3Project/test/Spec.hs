@@ -1,7 +1,7 @@
 import Test.Hspec
 import Parser
 import AST
-import Compiler
+import PreCompiler
 import Prelude hiding (round)
 
 exPhase1, exPhase2, exPhase3, exPhase4 :: Phase
@@ -281,7 +281,7 @@ main = hspec $ do
         describe "game" $ do
             it "parses a game" $
                 parseGame game "Players: Brooks, Test Rounds: competition between everyone. elimination of Brooks; Win: Survive" `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True)), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []] Survive
-    describe "Compiler" $ do
+    describe "PreCompiler" $ do
         describe "remove0Rounds" $ do
             it "removes rounds with 0 repetitions" $
                 remove0Rounds [R [] 1 [], R [] 0 [], R [] 2 []] `shouldBe` [R [] 1 [], R [] 2 []]
@@ -506,7 +506,6 @@ main = hspec $ do
         describe "updateIds" $ do
             it "changes N to A in a Game" $
                 updateIds (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [N "Test"])))] 3 []] Survive) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [A "Test"])))] 3 []] Survive)
-            
-
-
-
+        describe "preCompile" $ do
+            it "applies modifiers, updates competitions, and updates ids" $
+                preCompile (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [From 4 Before 2 exPhase1], R [Act (Comp (Placed Team (IdList [] [N "Test"]) True True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 3 [], R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), exPhase1, Prog (AU (Elimination) (IdList [] [A "Test"]))] 2 [], R [Act (Comp (Placed Team (IdList [] [A "Test"]) False True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive)
