@@ -7,6 +7,10 @@ import Compiler
 
 import Prelude hiding (round)
 import Text.PrettyPrint.HughesPJ (empty, text)
+import Control.Monad.Reader (runReader)
+
+ids :: IdNames
+ids = IdNames ["Brooks", "Mac"] ["Test", "Great"] ["votes", "points"]
 
 exPhase1, exPhase2, exPhase3, exPhase4 :: Phase
 exPhase1 = Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [])))
@@ -570,5 +574,17 @@ main = hspec $ do
         describe "compileAllocRef" $ do
             it "should compile an AllocRef into an access of allocateResults" $
                 compileAllocRef (ARef 1) `shouldBe` text "allocateResults[0]"
-
-            
+        describe "compileValue" $ do
+            it "compiles a Num into a regular number" $
+                runReader (compileValue (Num 3)) ids `shouldBe` text "3"
+            it "compiles a negative Num into a negative number" $
+                runReader (compileValue (Num (-3))) ids `shouldBe` text "-3"
+            it "compiles a Count into an access of a player's counter" $
+                runReader (compileValue (Count "points")) ids `shouldBe` text "player.counters[\"points\"]"
+            it "compiles a Result into an access of the compResults array scores" $
+                runReader (compileValue (Result (Cmp (CRef 0)))) ids `shouldBe` text "compResults[-1][\"scores\"]"
+            it "compiles a Result into an access of the voteResults array votes" $
+                runReader (compileValue (Result (Vt (VRef 0)))) ids `shouldBe` text "voteResults[-1][\"votes\"]"
+            it "compiles a Result into an access of the allocateResults array allocated" $
+                runReader (compileValue (Result (Alloc (ARef 0)))) ids `shouldBe` text "allocateResults[-1][\"allocated\"]"
+        

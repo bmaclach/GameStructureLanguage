@@ -2,9 +2,9 @@
 This provides functions for compiling a Game AST into a Python program that runs the game.
 -}
 module Compiler (
-    compileAffiliations, compileCounter, compileCountersFromAttList, 
+    IdNames(..), compileAffiliations, compileCounter, compileCountersFromAttList, 
     compileCounters, compilePlayer, compilePlayers, compileTeam, compileTeams,
-    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef
+    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue
 ) where
 
 import AST
@@ -16,6 +16,7 @@ import Text.PrettyPrint.HughesPJ (Doc, (<+>), (<>), ($$), braces, brackets,
 
 import Prelude hiding ((<>))
 import Data.List (intersperse)
+import Control.Monad.Reader
 
 pyImports :: Doc
 pyImports = text "from gamelib import *"
@@ -88,16 +89,57 @@ compileCounter a = error "Attempt to compile an Affiliation as a Counter"
 -- * Compiling Rounds
 
 -- | Data structure to store all game player names, affiliation names, and counter names
-data Ids = Ids {
-  players :: [Name],
-  affs :: [Name],
-  counters :: [Name]
+data IdNames = IdNames {
+    players :: [Name],
+    affs :: [Name],
+    counters :: [Name]
 }
 
--- compileValue :: Value -> Reader Ids Doc
--- compileValue (Num n) = integer n
--- compileValue (Count nm) = text "player.counters" <> brackets (text nm)
--- compileValue (Result (Cmp cr)) = 
+-- | Compiles an Identifier into python code that returns the desired player(s). The returned lists of Docs are for any function definitions that are required
+compileIdentifier :: Identifier -> Reader IdNames (Doc, [Doc])
+compileIdentifier Everyone = return $ text "game.playerList"
+compileIdentifier Chance il = do
+    ildoc <- compileIdentifierList il
+    return $ text "randomDraw" <> parens ildoc
+compileIdentifier Nominated = return $ brackets $ text "x for x in game.playerList if" <+> doubleQuotes nominated <+> text "in x.affiliations"
+compileIdentifier Tied = return $ text "tied"
+compileIdentifier Eliminated = return $ text "eliminated"
+compileIdentifier (N nm) = do
+    ids -> ask
+    if nm `elem` (players ids)
+        then return $ brackets $ text "x for x in game.playerList if x.name ==" <+> text nm
+        else error ("Reference to non-existent player" ++ nm) 
+compileIdentifier (A af) = do
+    ids -> ask 
+    if nm `elem` (affs ids)
+        then return $ brackets $ text "x for x in game.playerList if" <+> text af <+> "in x.affiliations"
+        else error ("Reference to non-existent affiliation" ++ af)
+compileIdentifier (Winner cr) = return $ brackets $ text "x for x in playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations"
+compileIdentifier (Loser cr) = return $ (brackets $ text "x for x in playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations"
+compileIdentifier (Majority vr Nothing) = return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True"), [])
+compileIdentifier (Majority vr (Just tb)) = do
+    tbdoc <- compileTiebreaker tb
+    return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> fst tbdoc), snd tbdoc)
+compileIdentifier (Minority vr Nothing) = return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False"), [])
+compileIdentifier (Minority vr (Just tb)) = do
+    tbdoc <- compileTiebreaker tb
+    return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> fst tbdoc), snd tbdoc)
+
+-- | Compiles a Tiebreaker into python code for the name of a function (the first Doc in the output) and the definition of that function (the second Doc in the output)
+compileTiebreaker :: Tiebreaker -> Reader Ids (Doc, [Doc])
+
+
+-- | Compiles a Value into python code that returns the desired numeric value
+compileValue :: Value -> Reader IdNames Doc
+compileValue (Num n) = return $ integer n
+compileValue (Count nm) = do
+    ids <- ask
+    if nm `elem` (counters ids) 
+        then return $ text "player.counters" <> brackets (doubleQuotes (text nm))
+        else error ("Reference to non-existent counter " ++ nm)
+compileValue (Result (Cmp cr)) = return $ compileCompRef cr <> brackets (doubleQuotes (text "scores"))
+compileValue (Result (Vt vr)) = return $ compileVoteRef vr <> brackets (doubleQuotes (text "votes"))
+compileValue (Result (Alloc ar)) = return $ compileAllocRef ar <> brackets (doubleQuotes (text "allocated"))
 
 -- | Compiles a CompRef into python code for accessing the compResults array at the referenced index. Note that indexing starts at 1 for the game language.
 compileCompRef :: CompRef -> Doc
