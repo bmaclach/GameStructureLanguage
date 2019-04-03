@@ -4,7 +4,7 @@ This provides functions for compiling a Game AST into a Python program that runs
 module Compiler (
     compileAffiliations, compileCounter, compileCountersFromAttList, 
     compileCounters, compilePlayer, compilePlayers, compileTeam, compileTeams,
-    compilePlayerInfo
+    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef
 ) where
 
 import AST
@@ -84,3 +84,29 @@ compileCounter (Counter nm start minval maxval) = braces $
               ifMax (Just i) = comma <+> doubleQuotes (text "max") <> 
                 colon <+> integer i
 compileCounter a = error "Attempt to compile an Affiliation as a Counter"
+
+-- * Compiling Rounds
+
+-- | Data structure to store all game player names, affiliation names, and counter names
+data Ids = Ids {
+  players :: [Name],
+  affs :: [Name],
+  counters :: [Name]
+}
+
+-- compileValue :: Value -> Reader Ids Doc
+-- compileValue (Num n) = integer n
+-- compileValue (Count nm) = text "player.counters" <> brackets (text nm)
+-- compileValue (Result (Cmp cr)) = 
+
+-- | Compiles a CompRef into python code for accessing the compResults array at the referenced index. Note that indexing starts at 1 for the game language.
+compileCompRef :: CompRef -> Doc
+compileCompRef (CRef num) = text "compResults" <> brackets (integer (num-1))
+
+-- | Compiles a VoteRef into python code for accessing the voteResults array at the referenced index. Note that indexing starts at 1 for the game language.
+compileVoteRef :: VoteRef -> Doc
+compileVoteRef (VRef num) = text "voteResults" <> brackets (integer (num-1))
+
+-- | Compiles an AllocRef into python code for accessing the allocateResults array at the referenced index. Note that indexing starts at 1 for the game language.
+compileAllocRef :: AllocRef -> Doc
+compileAllocRef (ARef num) = text "allocateResults" <> brackets (integer (num-1))

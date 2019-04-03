@@ -561,5 +561,14 @@ main = hspec $ do
             it "compiles a PlayerInfo by adding players and teams to playerList and teamList and randomly dividing teams when True" $
                 compilePlayerInfo (PI [P "Brooks" [], P "Mac" []] ["Kucha", "Ogakor"] True) `shouldBe` text 
                 "game.playerList.append(Player(\"Brooks\", [], []))\ngame.playerList.append(Player(\"Mac\", [], []))\ngame.teamList.append(\"Kucha\")\ngame.teamList.append(\"Ogakor\")\nrandomlyDivideTeams(game.teamList, game.playerList)"
+        describe "compileCompRef" $ do
+            it "should compile a CompRef into an access of compResults" $
+                compileCompRef (CRef 3) `shouldBe` text "compResults[2]"
+        describe "compileVoteRef" $ do
+            it "should compile a VoteRef into an access of voteResults" $
+                compileVoteRef (VRef 0) `shouldBe` text "voteResults[-1]"
+        describe "compileAllocRef" $ do
+            it "should compile an AllocRef into an access of allocateResults" $
+                compileAllocRef (ARef 1) `shouldBe` text "allocateResults[0]"
 
             
