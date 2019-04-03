@@ -1,8 +1,12 @@
 import Test.Hspec
+
 import Parser
 import AST
 import PreCompiler
+import Compiler
+
 import Prelude hiding (round)
+import Text.PrettyPrint.HughesPJ (empty, text)
 
 exPhase1, exPhase2, exPhase3, exPhase4 :: Phase
 exPhase1 = Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [])))
@@ -509,3 +513,53 @@ main = hspec $ do
         describe "preCompile" $ do
             it "applies modifiers, updates competitions, and updates ids" $
                 preCompile (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [From 4 Before 2 exPhase1], R [Act (Comp (Placed Team (IdList [] [N "Test"]) True True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 3 [], R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), exPhase1, Prog (AU (Elimination) (IdList [] [A "Test"]))] 2 [], R [Act (Comp (Placed Team (IdList [] [A "Test"]) False True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive)
+    describe "Compiler" $ do
+        describe "compileAffiliations" $ do
+            it "compiles an attribute list into a list of string affiliations" $
+                compileAffiliations [Affiliation "Test", Counter "votes" Nothing Nothing Nothing, Affiliation "Great"] `shouldBe` text "[\"Test\", \"Great\"]"
+            it "compiles an attribute list with no affiliations into an empty list" $
+                compileAffiliations [Counter "votes" Nothing Nothing Nothing] `shouldBe` text "[]"
+        describe "compileCounter" $ do
+            it "compiles a counter with no starting, min, or max values" $
+                compileCounter (Counter "votes" Nothing Nothing Nothing) `shouldBe` text "{\"counter\": \"votes\"}"
+            it "compiles a counter with a starting value" $
+                compileCounter (Counter "votes" (Just 20) Nothing Nothing) `shouldBe` text "{\"counter\": \"votes\", \"starts\": 20}"
+            it "compiles a counter with a min value" $
+                compileCounter (Counter "votes" Nothing (Just 0) Nothing) `shouldBe` text "{\"counter\": \"votes\", \"min\": 0}"
+            it "compiles a counter with a max value" $
+                compileCounter (Counter "votes" Nothing Nothing (Just 100)) `shouldBe` text "{\"counter\": \"votes\", \"max\": 100}"   
+            it "compiles a counter with a max value" $
+                compileCounter (Counter "votes" (Just 20) (Just 0) (Just 100)) `shouldBe` text "{\"counter\": \"votes\", \"starts\": 20, \"min\": 0, \"max\": 100}"
+        describe "compileCountersFromAttList" $ do
+            it "compiles counters from a list of attributes" $ do
+                compileCountersFromAttList [Affiliation "Test", Counter "votes" Nothing Nothing Nothing, Counter "points" Nothing Nothing Nothing] `shouldBe` [text "{\"counter\": \"votes\"}", text "{\"counter\": \"points\"}"]
+            it "compiles an empty list if no counters in attribute list" $
+                compileCountersFromAttList [Affiliation "Test"] `shouldBe` []
+        describe "compileCounters" $ do
+            it "compiles a list of compiled counters into a python list" $
+                compileCounters [text "{\"counter\": \"votes\"}", text "{\"counter\": \"points\"}"] `shouldBe` text "[{\"counter\": \"votes\"}, {\"counter\": \"points\"}]"
+            it "compiles an empty list into a python empty list" $
+                compileCounters [] `shouldBe` text "[]"
+        describe "compilePlayer" $ do
+            it "compiles a Player into a python Player object appended to the playerList" $
+                compilePlayer (P "Brooks" [Affiliation "Great", Counter "votes" (Just 20) (Just 0) Nothing]) `shouldBe` text "game.playerList.append(Player(\"Brooks\", [\"Great\"], [{\"counter\": \"votes\", \"starts\": 20, \"min\": 0}]))"
+        describe "compilePlayers" $ do
+            it "compiles a list of Players into python code for each player on a separate line" $
+                compilePlayers [P "Brooks" [], P "Test" []] `shouldBe` text "game.playerList.append(Player(\"Brooks\", [], []))\ngame.playerList.append(Player(\"Test\", [], []))"
+        describe "compileTeam" $ do
+            it "compiles a team Name into python code for adding the team to the teamList" $ do
+                compileTeam "Jays" `shouldBe` text "game.teamList.append(\"Jays\")"
+        describe "compileTeams" $ do
+            it "compiles a list of teams into python code for adding each team to the teamList" $
+                compileTeams ["Kucha", "Ogakor"] `shouldBe` text "game.teamList.append(\"Kucha\")\ngame.teamList.append(\"Ogakor\")"
+            it "compiles no teams into nothing" $
+                compileTeams [] `shouldBe` empty
+        describe "compilePlayerInfo" $ do
+            it "compiles a PlayerInfo by adding players and teams to playerList and teamList and not randomly dividing teams when False" $
+                compilePlayerInfo (PI [P "Brooks" [], P "Mac" []] ["Kucha", "Ogakor"] False) `shouldBe` text 
+                    "game.playerList.append(Player(\"Brooks\", [], []))\ngame.playerList.append(Player(\"Mac\", [], []))\ngame.teamList.append(\"Kucha\")\ngame.teamList.append(\"Ogakor\")"
+            it "compiles a PlayerInfo by adding players and teams to playerList and teamList and randomly dividing teams when True" $
+                compilePlayerInfo (PI [P "Brooks" [], P "Mac" []] ["Kucha", "Ogakor"] True) `shouldBe` text 
+                "game.playerList.append(Player(\"Brooks\", [], []))\ngame.playerList.append(Player(\"Mac\", [], []))\ngame.teamList.append(\"Kucha\")\ngame.teamList.append(\"Ogakor\")\nrandomlyDivideTeams(game.teamList, game.playerList)"
+
+            

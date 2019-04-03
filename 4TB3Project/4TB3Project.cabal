@@ -25,7 +25,8 @@ library
       Scanner,
       AST,
       Parser,
-      PreCompiler
+      PreCompiler,
+      Compiler
   other-modules:
       Paths_4TB3Project
   hs-source-dirs:
@@ -33,6 +34,7 @@ library
   build-depends:
       base >=4.7 && <5
     , parsec >=3.1
+    , pretty >=1.1.3.6
   default-language: Haskell2010
 
 executable 4TB3Project-exe
@@ -59,4 +61,5 @@ test-suite 4TB3Project-test
       4TB3Project
     , base >=4.7 && <5
     , hspec >=2.7
+    , pretty >=1.1.3.6
   default-language: Haskell2010
