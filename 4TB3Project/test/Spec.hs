@@ -441,8 +441,71 @@ main = hspec $ do
         describe "getAllAffiliations" $ do
             it "returns all affiliations in a game plus 'nominated'" $
                 getAllAffiliations (G (PI [P "Brooks" [Affiliation "Jays"], P "Test" [Affiliation "Yankees"]] ["Jays", "Yankees"] False) [R [Prog (AU (Add "Kucha") (IdList [] [])), Prog (AU (Add "Jays") (IdList [] []))] 5 []] Survive) [] `shouldBe` ["nominated", "Jays", "Yankees", "Kucha"]
-            
-
+        describe "updateTiebreakIds" $ do
+            it "changes N to A in tiebreaker with no action" $
+                updateTiebreakIds [] ["Test"] (Tiebreak Nothing (N "Test")) `shouldBe` (Tiebreak Nothing (A "Test"))
+            it "changes N to A in tiebreaker with action" $
+                updateTiebreakIds [] ["Test"] (Tiebreak (Just (Comp (Scored Team (IdList [] [N "Test"])))) (N "Test")) `shouldBe` (Tiebreak (Just (Comp (Scored Team (IdList [] [A "Test"])))) (A "Test"))
+        describe "updateId" $ do
+            it "changes an N to an A if it is an affiliation" $
+                updateId [] ["Test"] (N "Test") `shouldBe` (A "Test")
+            it "does not change an N if it is a player name" $
+                updateId ["Test"] [] (N "Test") `shouldBe` (N "Test")
+            it "changes an N in a Chance identifier" $
+                updateId [] ["Test"] (Chance (IdList [] [N "Test"])) `shouldBe`(Chance (IdList [] [A "Test"]))
+            it "changes an N in a Majority tiebreaker" $
+                updateId [] ["Test"] (Majority (VRef 1) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Majority (VRef 1) (Just (Tiebreak Nothing (A "Test"))))
+            it "changes an N in a Minority tiebreaker" $
+                updateId [] ["Test"] (Minority (VRef 1) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Minority (VRef 1) (Just (Tiebreak Nothing (A "Test"))))
+            it "changes an N in a Most with no tiebreaker" $
+                updateId [] ["Test"] (Most "votes" (IdList [] [N "Test"]) Nothing) `shouldBe` (Most "votes" (IdList [] [A "Test"]) Nothing)
+            it "changes an N in a Most with a tiebreaker" $
+                updateId [] ["Test"] (Most "votes" (IdList [] [N "Test"]) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Most "votes" (IdList [] [A "Test"]) (Just (Tiebreak Nothing (A "Test"))))
+            it "changes an N in a Most with no tiebreaker" $
+                updateId [] ["Test"] (Least "votes" (IdList [] [N "Test"]) Nothing) `shouldBe` (Least "votes" (IdList [] [A "Test"]) Nothing)
+            it "changes an N in a Most with a tiebreaker" $
+                updateId [] ["Test"] (Least "votes" (IdList [] [N "Test"]) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Least "votes" (IdList [] [A "Test"]) (Just (Tiebreak Nothing (A "Test"))))
+            it "does not change other identifiers" $
+                updateId [] ["Test"] Everyone `shouldBe` Everyone
+        describe "updateIdentifierIds" $ do
+            it "changes N to A in a list of identifiers" $
+                updateIdentifierIds ["Brooks"] ["Test"] [N "Brooks", Everyone, N "Test"] `shouldBe` [N "Brooks", Everyone, A "Test"]
+        describe "updateIdValIds" $ do
+            it "changes N to A in a list of IdentifierVals" $
+                updateIdValIds ["Brooks"] ["Test"] [IdVal (N "Brooks") (Num 1), IdVal Everyone (Num 1), IdVal (N "Test") (Num 1)] `shouldBe` [IdVal (N "Brooks") (Num 1), IdVal Everyone (Num 1), IdVal (A "Test") (Num 1)]
+        describe "updateIdListIds" $ do
+            it "changes N to A in an IdentifierList" $
+                updateIdListIds ["Brooks"] ["Test"] (IdList [IdVal (N "Test") (Num 1), IdVal (N "Brooks") (Num 1)] [N "Brooks", N "Test"]) `shouldBe` (IdList [IdVal (A "Test") (Num 1), IdVal (N "Brooks") (Num 1)] [N "Brooks", A "Test"])
+        describe "updateActionIds" $ do
+            it "changes N to A in a Scored competition" $
+                updateActionIds [] ["Test"] (Comp (Scored Team (IdList [] [N "Test"]))) `shouldBe` (Comp (Scored Team (IdList [] [A "Test"])))
+            it "changes N to A in a Placed competition" $
+                updateActionIds [] ["Test"] (Comp (Placed Team (IdList [] [N "Test"]) False False)) `shouldBe` (Comp (Placed Team (IdList [] [A "Test"]) False False))
+            it "changes N to A in a Vote" $
+                updateActionIds [] ["Test"] (Dec (Vote (IdList [] [N "Test"]) (IdList [] [N "Test"]) False)) `shouldBe` (Dec (Vote (IdList [] [A "Test"]) (IdList [] [A "Test"]) False))
+            it "changes N to A in a Nomination" $
+                updateActionIds [] ["Test"] (Dec (Nomination 2 (IdList [] [N "Test"]) (IdList [] [N "Test"]) False)) `shouldBe` (Dec (Nomination 2 (IdList [] [A "Test"]) (IdList [] [A "Test"]) False))
+            it "changes N to A in an Allocation" $
+                updateActionIds [] ["Test"] (Dec (Allocation "votes" (IdList [] [N "Test"]))) `shouldBe` (Dec (Allocation "votes" (IdList [] [A "Test"])))
+            it "changes N to A in a DirectedVote" $
+                updateActionIds [] ["Test"] (Dec (DirectedVote (IdList [] [N "Test"]) (IdList [] [N "Test"]) False)) `shouldBe` (Dec (DirectedVote (IdList [] [A "Test"]) (IdList [] [A "Test"]) False))
+            it "changes N to A in a Uses" $
+                updateActionIds [] ["Test"] (Dec (Uses (N "Test") [Act (Comp (Scored Team (IdList [] [N "Test"])))] [Act (Comp (Scored Team (IdList [] [N "Test"])))])) `shouldBe` (Dec (Uses (A "Test") [Act (Comp (Scored Team (IdList [] [A "Test"])))] [Act (Comp (Scored Team (IdList [] [A "Test"])))]))
+        describe "updatePhaseIds" $ do
+            it "changes N to A in an Action" $
+                updatePhaseIds [] ["Test"] [Act (Comp (Scored Team (IdList [] [N "Test"])))] `shouldBe` [Act (Comp (Scored Team (IdList [] [A "Test"])))]
+            it "changes N to A in an AffiliationUpdate" $
+                updatePhaseIds [] ["Test"] [Prog (AU (Elimination) (IdList [] [N "Test"]))] `shouldBe` [Prog (AU (Elimination) (IdList [] [A "Test"]))]
+            it "changes N to A in a CounterUpdate" $
+                updatePhaseIds [] ["Test"] [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"]))] `shouldBe` [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"]))]
+            it "changes N to A in multiple phases" $
+                updatePhaseIds [] ["Test"] [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] `shouldBe` [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))]
+        describe "updateRoundIds" $ do
+            it "changes N to A in a Round" $
+                updateRoundIds [] ["Test"] (R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 []) `shouldBe` (R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 5 [])
+        describe "updateIds" $ do
+            it "changes N to A in a Game" $
+                updateIds (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [N "Test"])))] 3 []] Survive) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [A "Test"])))] 3 []] Survive)
             
 
 

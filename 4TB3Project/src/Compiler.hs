@@ -8,7 +8,9 @@ module Compiler (
     getCompRefIdList, getCompRefs, updateComp, updatePhaseComps, 
     updateRoundComps, updateComps, isNameTaken, getNamesFromPlayerList, 
     getAllNames, getAffsFromPhaseList, getAffsFromRound, getAffsFromAttList, 
-    getAffsFromPlayerList, getAllAffiliations
+    getAffsFromPlayerList, getAllAffiliations, updateTiebreakIds, updateId, 
+    updateIdentifierIds, updateIdValIds, updateIdListIds, updateActionIds, 
+    updatePhaseIds, updateRoundIds, updateIds
 ) where
 
 import AST
@@ -149,6 +151,66 @@ updateCompInfo (ci@(num, wn, ln):cis) ci2@(n, wn2, ln2) = if num == n
     else ci : (updateCompInfo cis ci2)
 
 -- * Functions for updating and checking Identifiers
+
+-- | Changes identifiers with the N constructor to identifiers with the A constructor if the string matches an affiliation and not a player name
+updateIds :: Game -> Game
+updateIds g@(G pi rl wc) = G pi (map (updateRoundIds playerNames affNames) rl) wc
+    where playerNames = getAllNames g
+          affNames = getAllAffiliations g playerNames
+
+
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for a round
+updateRoundIds :: [Name] -> [Name] -> Round -> Round
+updateRoundIds pn an (R pl n ms) = R (updatePhaseIds pn an pl) n ms
+
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for a list of phases
+updatePhaseIds :: [Name] -> [Name] -> [Phase] -> [Phase]
+updatePhaseIds _ _ [] = []
+updatePhaseIds pn an ((Act a):pl) = (Act (updateActionIds pn an a)) : (updatePhaseIds pn an pl)
+updatePhaseIds pn an ((Prog (AU au il)):pl) = (Prog (AU au (updateIdListIds pn an il))) : (updatePhaseIds pn an pl)
+updatePhaseIds pn an ((Prog (CU cu il)):pl) = (Prog (CU cu (updateIdListIds pn an il))) : (updatePhaseIds pn an pl)
+
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for an Action
+updateActionIds :: [Name] -> [Name] -> Action -> Action
+updateActionIds pn an (Comp (Scored c il)) = Comp (Scored c (updateIdListIds pn an il))
+updateActionIds pn an (Comp (Placed c il wn ln)) = Comp (Placed c (updateIdListIds pn an il) wn ln)
+updateActionIds pn an (Dec (Vote il1 il2 sv)) = Dec (Vote (updateIdListIds pn an il1) (updateIdListIds pn an il2) sv)
+updateActionIds pn an (Dec (Nomination n il1 il2 sv)) = Dec (Nomination n (updateIdListIds pn an il1) (updateIdListIds pn an il2) sv)
+updateActionIds pn an (Dec (Allocation nm il)) = Dec (Allocation nm (updateIdListIds pn an il))
+updateActionIds pn an (Dec (DirectedVote il1 il2 sv)) = Dec (DirectedVote (updateIdListIds pn an il1) (updateIdListIds pn an il2) sv)
+updateActionIds pn an (Dec (Uses i ifpl elsepl)) = Dec (Uses (updateId pn an i) (updatePhaseIds pn an ifpl) (updatePhaseIds pn an elsepl))
+
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for an IdentifierList
+updateIdListIds :: [Name] -> [Name] -> IdentifierList -> IdentifierList
+updateIdListIds pn an (IdList ivs is) = IdList (updateIdValIds pn an ivs) (updateIdentifierIds pn an is)
+
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for an IdentifierVal list
+updateIdValIds :: [Name] -> [Name] -> [IdentifierVal] -> [IdentifierVal]
+updateIdValIds _ _ [] = []
+updateIdValIds pn an ((IdVal id val):ivs) = (IdVal (updateId pn an id) val) : (updateIdValIds pn an ivs)
+
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for an identifier list
+updateIdentifierIds :: [Name] -> [Name] -> [Identifier] -> [Identifier]
+updateIdentifierIds pn an il = map (updateId pn an) il
+
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation
+updateId :: [Name] -> [Name] -> Identifier -> Identifier
+updateId pn an (N nm) = if nm `elem` an
+    then A nm else if nm `elem` pn
+        then N nm 
+        else error ("Name " ++ nm ++ " does not match any player or affiliation")
+updateId pn an (Chance il) = Chance (updateIdListIds pn an il)
+updateId pn an (Majority vr (Just tb)) = Majority vr (Just (updateTiebreakIds pn an tb))
+updateId pn an (Minority vr (Just tb)) = Minority vr (Just (updateTiebreakIds pn an tb))
+updateId pn an (Most c il Nothing) = Most c (updateIdListIds pn an il) Nothing
+updateId pn an (Most c il (Just tb)) = Most c (updateIdListIds pn an il) (Just (updateTiebreakIds pn an tb))
+updateId pn an (Least c il Nothing) = Least c (updateIdListIds pn an il) Nothing
+updateId pn an (Least c il (Just tb)) = Least c (updateIdListIds pn an il) (Just (updateTiebreakIds pn an tb))
+updateId _ _ id = id
+
+updateTiebreakIds :: [Name] -> [Name] -> Tiebreaker -> Tiebreaker
+updateTiebreakIds pn an (Tiebreak Nothing id) = Tiebreak Nothing (updateId pn an id)
+updateTiebreakIds pn an (Tiebreak (Just a) id) = Tiebreak (Just (updateActionIds pn an a)) (updateId pn an id)
 
 -- | Extracts all player names from a Game
 getAllNames :: Game -> [Name]
