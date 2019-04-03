@@ -587,4 +587,25 @@ main = hspec $ do
                 runReader (compileValue (Result (Vt (VRef 0)))) ids `shouldBe` text "voteResults[-1][\"votes\"]"
             it "compiles a Result into an access of the allocateResults array allocated" $
                 runReader (compileValue (Result (Alloc (ARef 0)))) ids `shouldBe` text "allocateResults[-1][\"allocated\"]"
+        describe "compileIdentifier" $ do
+            it "compiles Everyone into the playerList" $
+                runReader (compileIdentifier Everyone) ids `shouldBe` (text "game.playerList", [])
+            it "compiles Nominated into a list of nominated players" $
+                runReader (compileIdentifier Nominated) ids `shouldBe` (text "[x for x in game.playerList if \"nominated\" in x.affiliations]", [])
+            it "compiles Tied into local variable tied for tiebreaker functions" $
+                runReader (compileIdentifier Tied) ids `shouldBe` (text "tied", [])
+            it "compiles Eliminated into the eliminated players list" $
+                runReader (compileIdentifier Eliminated) ids `shouldBe` (text "eliminated", [])
+            it "compiles N into a list containing the named player" $
+                runReader (compileIdentifier (N "Brooks")) ids `shouldBe` (text "[x for x in game.playerList if x.name == \"Brooks\"]", [])
+            it "compiles A into a list containing all players with the specified affiliation" $
+                runReader (compileIdentifier (A "Test")) ids `shouldBe` (text "[x for x in game.playerList if \"Test\" in x.affiliations]", [])
+            it "compiles Winner into a list containing the winning player or all players with the winning affiliation" $
+                runReader (compileIdentifier (Winner (CRef 0))) ids `shouldBe` (text "[x for x in game.playerList if x == compResults[-1][\"winner\"] or compResults[-1][\"winner\"] in x.affiliations]", [])
+            it "compiles Loser into a list containing the losing player or all players with the losing affiliation" $
+                runReader (compileIdentifier (Loser (CRef 0))) ids `shouldBe` (text "[x for x in game.playerList if x == compResults[-1][\"loser\"] or compResults[-1][\"loser\"] in x.affiliations]", [])
+            it "compiles Majority vote receiver with no tiebreaker into a list containing the majority vote receiver" $
+                runReader (compileIdentifier (Majority (VRef 0) Nothing)) ids `shouldBe` (text "[getVoteMinOrMax(voteResults[-1], True)]", [])
+            it "compiles Minority vote receiver with no tiebreaker into a list containing the minority vote receiver" $
+                runReader (compileIdentifier (Minority (VRef 0) Nothing)) ids `shouldBe` (text "[getVoteMinOrMax(voteResults[-1], False)]", [])
         

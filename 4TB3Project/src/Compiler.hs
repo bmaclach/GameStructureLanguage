@@ -4,7 +4,7 @@ This provides functions for compiling a Game AST into a Python program that runs
 module Compiler (
     IdNames(..), compileAffiliations, compileCounter, compileCountersFromAttList, 
     compileCounters, compilePlayer, compilePlayers, compileTeam, compileTeams,
-    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue
+    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue, compileIdentifier
 ) where
 
 import AST
@@ -95,38 +95,68 @@ data IdNames = IdNames {
     counters :: [Name]
 }
 
--- | Compiles an Identifier into python code that returns the desired player(s). The returned lists of Docs are for any function definitions that are required
+-- | Compiles an IdentifierList into a python list containing the desired player(s). The list is stored in a variable whose name is represented by the first Doc. The second Doc is the definition of the list and the list of Docs is for any function definitions that are required.
+-- compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, Doc, [Doc])
+
+-- | Compiles an Identifier into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
 compileIdentifier :: Identifier -> Reader IdNames (Doc, [Doc])
-compileIdentifier Everyone = return $ text "game.playerList"
-compileIdentifier Chance il = do
-    ildoc <- compileIdentifierList il
-    return $ text "randomDraw" <> parens ildoc
-compileIdentifier Nominated = return $ brackets $ text "x for x in game.playerList if" <+> doubleQuotes nominated <+> text "in x.affiliations"
-compileIdentifier Tied = return $ text "tied"
-compileIdentifier Eliminated = return $ text "eliminated"
+compileIdentifier Everyone = return $ (text "game.playerList", [])
+-- compileIdentifier Chance il = do
+--     ildoc <- compileIdentifierList il
+--     return $ (text "randomDraw" <> parens (fst ildoc), snd ildoc)
+compileIdentifier Nominated = return $ (brackets $ text "x for x in game.playerList if" <+> doubleQuotes (text "nominated") <+> text "in x.affiliations", [])
+compileIdentifier Tied = return $ (text "tied", [])
+compileIdentifier Eliminated = return $ (text "eliminated", [])
 compileIdentifier (N nm) = do
-    ids -> ask
+    ids <- ask
     if nm `elem` (players ids)
-        then return $ brackets $ text "x for x in game.playerList if x.name ==" <+> text nm
+        then return $ (brackets $ text "x for x in game.playerList if x.name ==" <+> doubleQuotes (text nm), [])
         else error ("Reference to non-existent player" ++ nm) 
 compileIdentifier (A af) = do
-    ids -> ask 
-    if nm `elem` (affs ids)
-        then return $ brackets $ text "x for x in game.playerList if" <+> text af <+> "in x.affiliations"
+    ids <- ask 
+    if af `elem` (affs ids)
+        then return $ (brackets $ text "x for x in game.playerList if" <+> doubleQuotes (text af) <+> text "in x.affiliations", [])
         else error ("Reference to non-existent affiliation" ++ af)
-compileIdentifier (Winner cr) = return $ brackets $ text "x for x in playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations"
-compileIdentifier (Loser cr) = return $ (brackets $ text "x for x in playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations"
-compileIdentifier (Majority vr Nothing) = return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True"), [])
-compileIdentifier (Majority vr (Just tb)) = do
-    tbdoc <- compileTiebreaker tb
-    return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> fst tbdoc), snd tbdoc)
-compileIdentifier (Minority vr Nothing) = return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False"), [])
-compileIdentifier (Minority vr (Just tb)) = do
-    tbdoc <- compileTiebreaker tb
-    return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> fst tbdoc), snd tbdoc)
+compileIdentifier (Winner cr) = return $ (brackets $ text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations", [])
+compileIdentifier (Loser cr) = return $ (brackets $ text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations", [])
+compileIdentifier (Majority vr Nothing) = return $ (brackets $ text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True"), [])
+-- compileIdentifier (Majority vr (Just tb)) = do
+--     tbdoc <- compileTiebreaker tb
+--     return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> fst tbdoc), snd tbdoc)
+compileIdentifier (Minority vr Nothing) = return $ (brackets $ text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False"), [])
+-- compileIdentifier (Minority vr (Just tb)) = do
+--     tbdoc <- compileTiebreaker tb
+--     return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> fst tbdoc), snd tbdoc)
+-- compileIdentifier (Most nm il Nothing) = do
+--     ids <- ask
+--     ildoc <- compileIdentifierList il
+--     if nm `elem` (counters ids) 
+--         then return $ (text "getMinOrMax" <> parens (fst ildoc <> comma <+> text nm <> comma <+> text "True"), snd ildoc)
+--         else error ("Reference to non-existent counter " ++ nm)
+-- compileIdentifier (Most nm il (Just tb)) = do
+--     ids <- ask
+--     ildoc <- compileIdentifierList il
+--     tbdoc <- compileTiebreaker
+--     if nm `elem` (counters ids) 
+--         then return $ (text "getMinOrMax" <> parens (fst ildoc <> comma <+> text nm <> comma <+> text "True" <> comma <+> fst tbdoc), snd ildoc ++ snd tbdoc)
+--         else error ("Reference to non-existent counter " ++ nm)
+-- compileIdentifier (Least nm il Nothing) = do
+--     ids <- ask
+--     ildoc <- compileIdentifierList il
+--     if nm `elem` (counters ids) 
+--         then return $ (text "getMinOrMax" <> parens (fst ildoc <> comma <+> text nm <> comma <+> text "False"), snd ildoc)
+--         else error ("Reference to non-existent counter " ++ nm)
+-- compileIdentifier (Least nm il (Just tb)) = do
+--     ids <- ask
+--     ildoc <- compileIdentifierList il
+--     tbdoc <- compileTiebreaker
+--     if nm `elem` (counters ids) 
+--         then return $ (text "getMinOrMax" <> parens (fst ildoc <> comma <+> text nm <> comma <+> text "False" <> comma <+> fst tbdoc), snd ildoc ++ snd tbdoc)
+--         else error ("Reference to non-existent counter " ++ nm)
+
 
 -- | Compiles a Tiebreaker into python code for the name of a function (the first Doc in the output) and the definition of that function (the second Doc in the output)
-compileTiebreaker :: Tiebreaker -> Reader Ids (Doc, [Doc])
+-- compileTiebreaker :: Tiebreaker -> Reader Ids (Doc, [Doc])
 
 
 -- | Compiles a Value into python code that returns the desired numeric value
