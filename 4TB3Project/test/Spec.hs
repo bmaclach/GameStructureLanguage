@@ -589,43 +589,41 @@ main = hspec $ do
                 runReader (compileValue (Result (Alloc (ARef 0)))) ids `shouldBe` text "allocateResults[-1][\"allocated\"][player]"
         describe "compileIdentifier" $ do
             it "compiles Everyone into the playerList" $
-                runReader (compileIdentifier Everyone) ids `shouldBe` (text "game.playerList", [])
+                runReader (compileIdentifier Everyone 1) ids `shouldBe` (text "ident = game.playerList", [])
             it "compiles Nominated into a list of nominated players" $
-                runReader (compileIdentifier Nominated) ids `shouldBe` (text "[x for x in game.playerList if \"nominated\" in x.affiliations]", [])
+                runReader (compileIdentifier Nominated 1) ids `shouldBe` (text "ident = [x for x in game.playerList if \"nominated\" in x.affiliations]", [])
             it "compiles Tied into local variable tied for tiebreaker functions" $
-                runReader (compileIdentifier Tied) ids `shouldBe` (text "tied", [])
+                runReader (compileIdentifier Tied 1) ids `shouldBe` (text "ident = tied", [])
             it "compiles Eliminated into the eliminated players list" $
-                runReader (compileIdentifier Eliminated) ids `shouldBe` (text "eliminated", [])
+                runReader (compileIdentifier Eliminated 1) ids `shouldBe` (text "ident = eliminated", [])
             it "compiles N into a list containing the named player" $
-                runReader (compileIdentifier (N "Brooks")) ids `shouldBe` (text "[x for x in game.playerList if x.name == \"Brooks\"]", [])
+                runReader (compileIdentifier (N "Brooks") 1) ids `shouldBe` (text "ident = [x for x in game.playerList if x.name == \"Brooks\"]", [])
             it "compiles A into a list containing all players with the specified affiliation" $
-                runReader (compileIdentifier (A "Test")) ids `shouldBe` (text "[x for x in game.playerList if \"Test\" in x.affiliations]", [])
+                runReader (compileIdentifier (A "Test") 1) ids `shouldBe` (text "ident = [x for x in game.playerList if \"Test\" in x.affiliations]", [])
             it "compiles Winner into a list containing the winning player or all players with the winning affiliation" $
-                runReader (compileIdentifier (Winner (CRef 0))) ids `shouldBe` (text "[x for x in game.playerList if x == compResults[-1][\"winner\"] or compResults[-1][\"winner\"] in x.affiliations]", [])
+                runReader (compileIdentifier (Winner (CRef 0)) 1) ids `shouldBe` (text "ident = [x for x in game.playerList if x == compResults[-1][\"winner\"] or compResults[-1][\"winner\"] in x.affiliations]", [])
             it "compiles Loser into a list containing the losing player or all players with the losing affiliation" $
-                runReader (compileIdentifier (Loser (CRef 0))) ids `shouldBe` (text "[x for x in game.playerList if x == compResults[-1][\"loser\"] or compResults[-1][\"loser\"] in x.affiliations]", [])
+                runReader (compileIdentifier (Loser (CRef 0)) 1) ids `shouldBe` (text "ident = [x for x in game.playerList if x == compResults[-1][\"loser\"] or compResults[-1][\"loser\"] in x.affiliations]", [])
             it "compiles Majority vote receiver with no tiebreaker into a list containing the majority vote receiver" $
-                runReader (compileIdentifier (Majority (VRef 0) Nothing)) ids `shouldBe` (text "[getVoteMinOrMax(voteResults[-1], True)]", [])
+                runReader (compileIdentifier (Majority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], True)]", [])
             it "compiles Minority vote receiver with no tiebreaker into a list containing the minority vote receiver" $
-                runReader (compileIdentifier (Minority (VRef 0) Nothing)) ids `shouldBe` (text "[getVoteMinOrMax(voteResults[-1], False)]", [])
+                runReader (compileIdentifier (Minority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], False)]", [])
         describe "compileIdentifiers" $ do
             it "compiles an empty list of identifiers as an empty excludeList" $
-                runReader (compileIdentifiers []) ids `shouldBe` (text "excludeList = []", [])
-            it "compiles a singleton list of identifiers and assigns it to excludeList" $
-                runReader (compileIdentifiers [Everyone]) ids `shouldBe` (text "excludeList = game.playerList", [])
-            it "compiles a multiple-element list of identifiers, concatenates them and assigns them to excludeList" $
-                runReader (compileIdentifiers [N "Brooks", Everyone]) ids `shouldBe` (text "excludeList = [x for x in game.playerList if x.name == \"Brooks\"] + game.playerList", [])
+                runReader (compileIdentifiers [] 1) ids `shouldBe` (text "excludeList1 = []", [])
+            it "compiles a multiple-element list of identifiers and appends each to excludeList" $
+                runReader (compileIdentifiers [N "Brooks", Everyone] 1) ids `shouldBe` (text "excludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nident = game.playerList\nexcludeList1 += ident", [])
         describe "compileIdVal" $ do
             it "compiles an IdentifierVal with Value Num 1 just by assigning the Identifier to idVal variable" $
-                runReader (compileIdVal (IdVal Everyone (Num 1))) ids `shouldBe` (text "idVal = game.playerList", [])
+                runReader (compileIdVal (IdVal Everyone (Num 1)) 1) ids `shouldBe` (text "ident = game.playerList\nidVal = ident", [])
             it "compiles any other IdentifierVal by repeating each Identifier Value times" $
-                runReader (compileIdVal (IdVal Everyone (Num 2))) ids `shouldBe` (text "idVal = []\nfor player in game.playerList: idVal += [player] * 2", [])
+                runReader (compileIdVal (IdVal Everyone (Num 2)) 1) ids `shouldBe` (text "ident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2", [])
         describe "compileIdVals" $ do
             it "compiles an empty list of IdentifierVals by assigning includeList to be empty" $
-                runReader (compileIdVals []) ids `shouldBe` (text "includeList = []", [])
+                runReader (compileIdVals [] 1) ids `shouldBe` (text "includeList1 = []", [])
             it "compiles a non-empty IdentifierVal list by appending each compiled IdentifierVal onto the includeList" $
-                runReader (compileIdVals [IdVal Everyone (Num 1), IdVal (N "Brooks") (Count "votes")]) ids `shouldBe` (text "includeList = []\nidVal = game.playerList\nincludeList += idVal\nidVal = []\nfor player in [x for x in game.playerList if x.name == \"Brooks\"]: idVal += [player] * player.counters[\"votes\"]\nincludeList += idVal", [])
+                runReader (compileIdVals [IdVal Everyone (Num 1), IdVal (N "Brooks") (Count "votes")] 1) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nidVal = []\nfor player in ident: idVal += [player] * player.counters[\"votes\"]\nincludeList1 += idVal", [])
         describe "compileIdentifierList" $ do
             it "compiles an IdentifierList by filtering the excludeList from the includeList" $
-                runReader (compileIdentifierList (IdList [IdVal Everyone (Num 1)] [N "Brooks"])) ids `shouldBe` (text "includeList = []\nidVal = game.playerList\nincludeList += idVal\nexcludeList = [x for x in game.playerList if x.name == \"Brooks\"]\nidList = [x for x in includeList if x not in excludeList]", [])
+                runReader (compileIdentifierList (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) 1) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]", [])
         

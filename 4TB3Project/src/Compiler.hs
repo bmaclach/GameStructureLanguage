@@ -97,77 +97,77 @@ data IdNames = IdNames {
     counters :: [Name]
 }
 
--- | Compiles an IdentifierList into a python list containing the desired player(s) by filtering out the excludeList from the includeList. The list of Docs is for any function definitions that are required
-compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, [Doc])
-compileIdentifierList (IdList il el) = do
-    inclList <- compileIdVals il
-    exclList <- compileIdentifiers el
-    return $ (vcat [fst inclList, fst exclList, text "idList =" <+> brackets (text "x for x in includeList if x not in excludeList")], snd inclList ++ snd exclList)
+-- | Compiles an IdentifierList into a python list containing the desired player(s) by filtering out the excludeList from the includeList. The integer input represents the level of nesting, needed to generate unique variable names. The list of Docs is for any function definitions that are required
+compileIdentifierList :: IdentifierList -> Integer -> Reader IdNames (Doc, [Doc])
+compileIdentifierList (IdList il el) n = do
+    inclList <- compileIdVals il n
+    exclList <- compileIdentifiers el n
+    return $ (vcat [fst inclList, fst exclList, text "idList" <> integer n <+> equals <+> brackets (text "x for x in includeList" <> integer n <+> text "if x not in excludeList" <> integer n)], snd inclList ++ snd exclList)
 
--- | Compiles a list of IdentifierVals into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
-compileIdVals :: [IdentifierVal] -> Reader IdNames (Doc, [Doc])
-compileIdVals idv = do
-    inclList <- concatIdVals idv
-    return $ (vcat [text "includeList" <+> equals <+> brackets empty,
+-- | Compiles a list of IdentifierVals into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
+compileIdVals :: [IdentifierVal] -> Integer -> Reader IdNames (Doc, [Doc])
+compileIdVals idv n = do
+    inclList <- concatIdVals idv n
+    return $ (vcat [text "includeList" <> integer n <+> equals <+> brackets empty,
               fst inclList], snd inclList)
-        where concatIdVals :: [IdentifierVal] -> Reader IdNames (Doc, [Doc])
-              concatIdVals [] = return (empty, [])
-              concatIdVals (iv:ivs) = do
-                ivdoc <- compileIdVal iv
-                ivsdoc <- concatIdVals ivs
-                return $ (vcat [fst ivdoc, text "includeList += idVal", fst ivsdoc], snd ivdoc ++ snd ivsdoc)
+        where concatIdVals :: [IdentifierVal] -> Integer -> Reader IdNames (Doc, [Doc])
+              concatIdVals [] n = return (empty, [])
+              concatIdVals (iv:ivs) n = do
+                ivdoc <- compileIdVal iv n
+                ivsdoc <- concatIdVals ivs n
+                return $ (vcat [fst ivdoc, text "includeList" <> integer n <+> text "+= idVal", fst ivsdoc], snd ivdoc ++ snd ivsdoc)
 
--- | Compiles an IdentifierVal into python code that returns a list containing the Identifier repeated Value times. The returned list of Docs is for any function definitions that are required
-compileIdVal :: IdentifierVal -> Reader IdNames (Doc, [Doc])
-compileIdVal (IdVal id (Num 1)) = do
-    iddoc <- compileIdentifier id
-    return $ (text "idVal" <+> equals <+> fst iddoc, snd iddoc)
-compileIdVal (IdVal id v) = do
-    iddoc <- compileIdentifier id
+-- | Compiles an IdentifierVal into python code that returns a list containing the Identifier repeated Value times. The intger input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
+compileIdVal :: IdentifierVal -> Integer -> Reader IdNames (Doc, [Doc])
+compileIdVal (IdVal id (Num 1)) n = do
+    iddoc <- compileIdentifier id n
+    return $ (vcat [fst iddoc, text "idVal = ident"], snd iddoc)
+compileIdVal (IdVal id v) n = do
+    iddoc <- compileIdentifier id n
     vdoc <- compileValue v
     return $ (vcat [
+        fst iddoc,
         text "idVal" <+> equals <+> brackets empty,
-        text "for player in" <+> fst iddoc <> colon <+> text "idVal +=" <+> brackets (text "player") <+> text "*" <+> vdoc], snd iddoc)
+        text "for player in ident" <> colon <+> text "idVal +=" <+> brackets (text "player") <+> text "*" <+> vdoc], snd iddoc)
 
--- | Compiles a list of Identifiers into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
-compileIdentifiers :: [Identifier] -> Reader IdNames (Doc, [Doc])
-compileIdentifiers il = do
-    exclList <- concatIds il
-    return $ (text "excludeList" <+> equals <+> fst exclList, snd exclList)
-        where concatIds :: [Identifier] -> Reader IdNames (Doc, [Doc])
-              concatIds [] = return $ (brackets empty, [])
-              concatIds [id] = compileIdentifier id
-              concatIds (id:idl) = do
-                iddoc <- compileIdentifier id
-                idldoc <- concatIds idl
-                return $ (fst iddoc <+> text "+" <+> fst idldoc, snd iddoc ++ snd idldoc)
+-- | Compiles a list of Identifiers into python code that returns the desired player(s). The intger input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
+compileIdentifiers :: [Identifier] -> Integer -> Reader IdNames (Doc, [Doc])
+compileIdentifiers il n = do
+    exclList <- concatIds il n
+    return $ (vcat [text "excludeList" <> integer n <+> equals <+> brackets empty, fst exclList], snd exclList)
+        where concatIds :: [Identifier] -> Integer -> Reader IdNames (Doc, [Doc])
+              concatIds [] n = return $ (empty, [])
+              concatIds (id:idl) n = do
+                iddoc <- compileIdentifier id n
+                idldoc <- concatIds idl n
+                return $ (vcat [fst iddoc, text "excludeList" <> integer n <+> text "+= ident", fst idldoc], snd iddoc ++ snd idldoc)
 
--- | Compiles an Identifier into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
-compileIdentifier :: Identifier -> Reader IdNames (Doc, [Doc])
-compileIdentifier Everyone = return $ (text "game.playerList", [])
+-- | Compiles an Identifier into python code that returns the desired player(s). The intger input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
+compileIdentifier :: Identifier -> Integer -> Reader IdNames (Doc, [Doc])
+compileIdentifier Everyone _ = return $ (text "ident = game.playerList", [])
 -- compileIdentifier Chance il = do
 --     ildoc <- compileIdentifierList il
 --     return $ (text "randomDraw" <> parens (fst ildoc), snd ildoc)
-compileIdentifier Nominated = return $ (brackets $ text "x for x in game.playerList if" <+> doubleQuotes (text "nominated") <+> text "in x.affiliations", [])
-compileIdentifier Tied = return $ (text "tied", [])
-compileIdentifier Eliminated = return $ (text "eliminated", [])
-compileIdentifier (N nm) = do
+compileIdentifier Nominated _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text "nominated") <+> text "in x.affiliations"), [])
+compileIdentifier Tied _ = return $ (text "ident = tied", [])
+compileIdentifier Eliminated _ = return $ (text "ident = eliminated", [])
+compileIdentifier (N nm) _ = do
     ids <- ask
     if nm `elem` (players ids)
-        then return $ (brackets $ text "x for x in game.playerList if x.name ==" <+> doubleQuotes (text nm), [])
+        then return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x.name ==" <+> doubleQuotes (text nm)), [])
         else error ("Reference to non-existent player" ++ nm) 
-compileIdentifier (A af) = do
+compileIdentifier (A af) _ = do
     ids <- ask 
     if af `elem` (affs ids)
-        then return $ (brackets $ text "x for x in game.playerList if" <+> doubleQuotes (text af) <+> text "in x.affiliations", [])
+        then return $ (text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text af) <+> text "in x.affiliations"), [])
         else error ("Reference to non-existent affiliation" ++ af)
-compileIdentifier (Winner cr) = return $ (brackets $ text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations", [])
-compileIdentifier (Loser cr) = return $ (brackets $ text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations", [])
-compileIdentifier (Majority vr Nothing) = return $ (brackets $ text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True"), [])
+compileIdentifier (Winner cr) _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations"), [])
+compileIdentifier (Loser cr) _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations"), [])
+compileIdentifier (Majority vr Nothing) _ = return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True")), [])
 -- compileIdentifier (Majority vr (Just tb)) = do
 --     tbdoc <- compileTiebreaker tb
 --     return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> fst tbdoc), snd tbdoc)
-compileIdentifier (Minority vr Nothing) = return $ (brackets $ text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False"), [])
+compileIdentifier (Minority vr Nothing) _ = return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False")), [])
 -- compileIdentifier (Minority vr (Just tb)) = do
 --     tbdoc <- compileTiebreaker tb
 --     return $ (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> fst tbdoc), snd tbdoc)
