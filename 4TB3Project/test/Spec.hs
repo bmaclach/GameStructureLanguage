@@ -202,6 +202,11 @@ main = hspec $ do
                 Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True)
             it "parses a decision" $
                 parseGame action "vote by everyone between everyone" `shouldBe` Dec (Vote (IdList [IdVal Everyone (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False)
+        describe "tiebreaker" $ do
+            it "parses a tiebreaker with no action" $
+                parseGame tiebreaker "tiebroken by rocks chance (everyone)" `shouldBe` Tiebreak "rocks" Nothing (Chance (IdList [IdVal Everyone (Num 1)] [])) 
+            it "parses a tiebreaker with an action" $
+                parseGame tiebreaker "tiebroken by rocks competition between everyone chance (everyone)" `shouldBe` Tiebreak "rocks" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True))) (Chance (IdList [IdVal Everyone (Num 1)] [])) 
         describe "counterUpdate" $ do
             it "parses an increase to a counter" $
                 parseGame counterUpdate "increase votes by 3" `shouldBe` Increase "votes" (Num 3)
@@ -341,25 +346,25 @@ main = hspec $ do
                 getCompRefId (Chance (IdList [IdVal (Winner (CRef 2)) (Num 1)] [])) 3 False 
                     `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Majority encountered with tiebreaker" $
-                getCompRefId (Majority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
+                getCompRefId (Majority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
             it "does not add to CompInfo if Majority with tiebreaker with index 0 is encountered" $
-                getCompRefId (Majority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
+                getCompRefId (Majority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
             it "adds to CompInfo if Minority encountered with tiebreaker" $
-                getCompRefId (Minority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
+                getCompRefId (Minority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
             it "does not add to CompInfo if Minority with tiebreaker with index 0 is encountered" $
-                getCompRefId (Minority (VRef 1) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
+                getCompRefId (Minority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
             it "adds to CompInfo if Most with no tiebreaker encountered" $
                 getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Most with tiebreaker encountered" $
-                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
+                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
             it "does not add tiebreaker to CompInfo if Most with tiebreaker with index 0 is encountered" $
-                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
+                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Least with no tiebreaker encountered" $
                 getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Least with tiebreaker encountered" $
-                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
+                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
             it "does not add tiebreaker to CompInfo if Least with tiebreaker with index 0 is encountered" $
-                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
+                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
         describe "getCompRefIdentifiers" $
             it "adds info from list of identifiers to CompInfo" $
                 getCompRefIdentifiers [Winner (CRef 2), Everyone, Loser (CRef 2), N "Brooks"] 3 False `shouldBe` [(2, True, True)]
@@ -451,9 +456,9 @@ main = hspec $ do
                 getAllAffiliations (G (PI [P "Brooks" [Affiliation "Jays"], P "Test" [Affiliation "Yankees"]] ["Jays", "Yankees"] False) [R [Prog (AU (Add "Kucha") (IdList [] [])), Prog (AU (Add "Jays") (IdList [] []))] 5 []] Survive) [] `shouldBe` ["nominated", "Jays", "Yankees", "Kucha"]
         describe "updateTiebreakIds" $ do
             it "changes N to A in tiebreaker with no action" $
-                updateTiebreakIds [] ["Test"] (Tiebreak Nothing (N "Test")) `shouldBe` (Tiebreak Nothing (A "Test"))
+                updateTiebreakIds [] ["Test"] (Tiebreak "a" Nothing (N "Test")) `shouldBe` (Tiebreak "a" Nothing (A "Test"))
             it "changes N to A in tiebreaker with action" $
-                updateTiebreakIds [] ["Test"] (Tiebreak (Just (Comp (Scored Team (IdList [] [N "Test"])))) (N "Test")) `shouldBe` (Tiebreak (Just (Comp (Scored Team (IdList [] [A "Test"])))) (A "Test"))
+                updateTiebreakIds [] ["Test"] (Tiebreak "a" (Just (Comp (Scored Team (IdList [] [N "Test"])))) (N "Test")) `shouldBe` (Tiebreak "a" (Just (Comp (Scored Team (IdList [] [A "Test"])))) (A "Test"))
         describe "updateId" $ do
             it "changes an N to an A if it is an affiliation" $
                 updateId [] ["Test"] (N "Test") `shouldBe` (A "Test")
@@ -462,17 +467,17 @@ main = hspec $ do
             it "changes an N in a Chance identifier" $
                 updateId [] ["Test"] (Chance (IdList [] [N "Test"])) `shouldBe`(Chance (IdList [] [A "Test"]))
             it "changes an N in a Majority tiebreaker" $
-                updateId [] ["Test"] (Majority (VRef 1) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Majority (VRef 1) (Just (Tiebreak Nothing (A "Test"))))
+                updateId [] ["Test"] (Majority (VRef 1) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Majority (VRef 1) (Just (Tiebreak "a" Nothing (A "Test"))))
             it "changes an N in a Minority tiebreaker" $
-                updateId [] ["Test"] (Minority (VRef 1) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Minority (VRef 1) (Just (Tiebreak Nothing (A "Test"))))
+                updateId [] ["Test"] (Minority (VRef 1) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Minority (VRef 1) (Just (Tiebreak "a" Nothing (A "Test"))))
             it "changes an N in a Most with no tiebreaker" $
                 updateId [] ["Test"] (Most "votes" (IdList [] [N "Test"]) Nothing) `shouldBe` (Most "votes" (IdList [] [A "Test"]) Nothing)
             it "changes an N in a Most with a tiebreaker" $
-                updateId [] ["Test"] (Most "votes" (IdList [] [N "Test"]) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Most "votes" (IdList [] [A "Test"]) (Just (Tiebreak Nothing (A "Test"))))
+                updateId [] ["Test"] (Most "votes" (IdList [] [N "Test"]) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Most "votes" (IdList [] [A "Test"]) (Just (Tiebreak "a" Nothing (A "Test"))))
             it "changes an N in a Most with no tiebreaker" $
                 updateId [] ["Test"] (Least "votes" (IdList [] [N "Test"]) Nothing) `shouldBe` (Least "votes" (IdList [] [A "Test"]) Nothing)
             it "changes an N in a Most with a tiebreaker" $
-                updateId [] ["Test"] (Least "votes" (IdList [] [N "Test"]) (Just (Tiebreak Nothing (N "Test")))) `shouldBe` (Least "votes" (IdList [] [A "Test"]) (Just (Tiebreak Nothing (A "Test"))))
+                updateId [] ["Test"] (Least "votes" (IdList [] [N "Test"]) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Least "votes" (IdList [] [A "Test"]) (Just (Tiebreak "a" Nothing (A "Test"))))
             it "does not change other identifiers" $
                 updateId [] ["Test"] Everyone `shouldBe` Everyone
         describe "updateIdentifierIds" $ do

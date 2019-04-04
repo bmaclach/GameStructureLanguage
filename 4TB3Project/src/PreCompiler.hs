@@ -132,13 +132,13 @@ getCompRefId (Loser (CRef num)) n t = if not (t && num == 0)
     else []
         where compnum = if num == 0 then n else num
 getCompRefId (Chance il) n t = getCompRefIdList il n t
-getCompRefId (Majority _ (Just (Tiebreak _ id))) n t = getCompRefId id n True
-getCompRefId (Minority _ (Just (Tiebreak _ id))) n t = getCompRefId id n True
+getCompRefId (Majority _ (Just (Tiebreak _ _ id))) n t = getCompRefId id n True
+getCompRefId (Minority _ (Just (Tiebreak _ _ id))) n t = getCompRefId id n True
 getCompRefId (Most _ il Nothing) n t = getCompRefIdList il n t
-getCompRefId (Most _ il (Just (Tiebreak _ id))) n t = combineCompInfo 
+getCompRefId (Most _ il (Just (Tiebreak _ _ id))) n t = combineCompInfo 
     (getCompRefIdList il n t) (getCompRefId id n True)
 getCompRefId (Least _ il Nothing) n t = getCompRefIdList il n t
-getCompRefId (Least _ il (Just (Tiebreak _ id))) n t = combineCompInfo 
+getCompRefId (Least _ il (Just (Tiebreak _ _ id))) n t = combineCompInfo 
     (getCompRefIdList il n t) (getCompRefId id n True)
 getCompRefId id n t = []
 
@@ -213,8 +213,8 @@ updateId pn an (Least c il (Just tb)) = Least c (updateIdListIds pn an il) (Just
 updateId _ _ id = id
 
 updateTiebreakIds :: [Name] -> [Name] -> Tiebreaker -> Tiebreaker
-updateTiebreakIds pn an (Tiebreak Nothing id) = Tiebreak Nothing (updateId pn an id)
-updateTiebreakIds pn an (Tiebreak (Just a) id) = Tiebreak (Just (updateActionIds pn an a)) (updateId pn an id)
+updateTiebreakIds pn an (Tiebreak nm Nothing id) = Tiebreak nm Nothing (updateId pn an id)
+updateTiebreakIds pn an (Tiebreak nm (Just a) id) = Tiebreak nm (Just (updateActionIds pn an a)) (updateId pn an id)
 
 -- | Extracts all player names from a Game
 getAllNames :: Game -> [Name]

@@ -247,6 +247,7 @@ compileIdentifier (Least nm il Nothing) n = do
 
 -- | Compiles a Tiebreaker into python code for the name of a function (the first Doc in the output) and the definition of that function (the second Doc in the output). The integer input represents the level of nesting, needed to generate unique variable names.
 -- compileTiebreaker :: Tiebreaker -> Integer -> Reader Ids (Doc, [Doc])
+-- compileTiebreaker (Tiebreak)
 
 
 -- | Compiles a Value into python code that returns the desired numeric value

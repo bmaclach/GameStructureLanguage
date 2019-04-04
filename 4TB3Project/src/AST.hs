@@ -159,7 +159,7 @@ data VoteRef = VRef Number deriving (Show, Eq)
 data AllocRef = ARef Number deriving (Show, Eq)
 
 -- | A tiebreaker might include an action before choosing an identifier to resolve a tie
-data Tiebreaker = Tiebreak (Maybe Action) Identifier deriving (Show, Eq)
+data Tiebreaker = Tiebreak Name (Maybe Action) Identifier deriving (Show, Eq)
 
 -- | A goal is a number and the name of a counter for which the number must be reached
 data Goal = Gl Number Name deriving (Show, Eq)

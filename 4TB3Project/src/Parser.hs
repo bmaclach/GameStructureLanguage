@@ -8,7 +8,7 @@ module Parser (
     affiliation, counter, roundReference, phaseReference, timeReference,
     compReference, voteReference, allocateReference, actReference, value,
     identifierList, idValList, idList, identifierVal, identifierP, competitor,
-    competition, selfInclude, decision, action, counterUpdate, 
+    competition, selfInclude, decision, action, tiebreaker, counterUpdate, 
     affiliationUpdate, progression, phase, phaseList, modifier, modifierList,
     round, roundList, goal, goalList, winCondition, game
 ) where
@@ -423,7 +423,11 @@ modifier = do {reserved "just"
 
 tiebreaker = do
     reserved "tiebroken"
-    return $ Tiebreak Nothing Everyone
+    reserved "by"
+    nm <- identifier
+    act <- optionMaybe action
+    ident <- identifierP
+    return $ Tiebreak nm act ident
 
 -- * Win condition-related parsers
 
