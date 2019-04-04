@@ -608,4 +608,11 @@ main = hspec $ do
                 runReader (compileIdentifier (Majority (VRef 0) Nothing)) ids `shouldBe` (text "[getVoteMinOrMax(voteResults[-1], True)]", [])
             it "compiles Minority vote receiver with no tiebreaker into a list containing the minority vote receiver" $
                 runReader (compileIdentifier (Minority (VRef 0) Nothing)) ids `shouldBe` (text "[getVoteMinOrMax(voteResults[-1], False)]", [])
+        describe "compileIdentifiers" $ do
+            it "compiles an empty list of identifiers as an empty excludeList" $
+                runReader (compileIdentifiers []) ids `shouldBe` (text "excludeList = []", [])
+            it "compiles a singleton list of identifiers and assigns it to excludeList" $
+                runReader (compileIdentifiers [Everyone]) ids `shouldBe` (text "excludeList = game.playerList", [])
+            it "compiles a multiple-element list of identifiers, concatenates them and assigns them to excludeList" $
+                runReader (compileIdentifiers [N "Brooks", Everyone]) ids `shouldBe` (text "excludeList = [x for x in game.playerList if x.name == \"Brooks\"] + game.playerList", [])
         

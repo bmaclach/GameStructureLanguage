@@ -4,7 +4,7 @@ This provides functions for compiling a Game AST into a Python program that runs
 module Compiler (
     IdNames(..), compileAffiliations, compileCounter, compileCountersFromAttList, 
     compileCounters, compilePlayer, compilePlayers, compileTeam, compileTeams,
-    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue, compileIdentifier
+    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue, compileIdentifier, compileIdentifiers
 ) where
 
 import AST
@@ -97,6 +97,19 @@ data IdNames = IdNames {
 
 -- | Compiles an IdentifierList into a python list containing the desired player(s). The list is stored in a variable whose name is represented by the first Doc. The second Doc is the definition of the list and the list of Docs is for any function definitions that are required.
 -- compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, Doc, [Doc])
+
+-- | Compiles a list of Identifiers into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
+compileIdentifiers :: [Identifier] -> Reader IdNames (Doc, [Doc])
+compileIdentifiers il = do
+    exclList <- concatIds il
+    return $ (text "excludeList" <+> equals <+> fst exclList, snd exclList)
+        where concatIds :: [Identifier] -> Reader IdNames (Doc, [Doc])
+              concatIds [] = return $ (brackets empty, [])
+              concatIds [id] = compileIdentifier id
+              concatIds (id:idl) = do
+                iddoc <- compileIdentifier id
+                idldoc <- concatIds idl
+                return $ (fst iddoc <+> text "+" <+> fst idldoc, snd iddoc ++ snd idldoc)
 
 -- | Compiles an Identifier into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
 compileIdentifier :: Identifier -> Reader IdNames (Doc, [Doc])
