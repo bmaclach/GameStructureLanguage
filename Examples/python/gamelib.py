@@ -307,10 +307,19 @@ def randomlyDivideTeamsOfSize(teams, players):
             openTeams.pop(openTeams.keys()[team])
             del counts[team]
 
-def uses(player):
+def uses(players):
+    deciders = ""
+    if len(players) == 1:
+        deciders = players[0].name
+        firstword = "Does "
+    else:
+        for player in players[1:]:
+            deciders += player.name + ", "
+        deciders += "and " + players[0].name
+        firstword = "Do "
     haveDecision = False
     while not haveDecision:
-        decision = input("Does " + player.name + " use their power? yes/no?\n")
+        decision = input(firstword + deciders + " use their power? yes/no?\n")
         if decision in {"yes", "y", "Yes", "Y"}:
             return True
         elif decision in {"no", "n", "No", "N"}:

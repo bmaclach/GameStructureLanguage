@@ -7,7 +7,7 @@ module Compiler (
     compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
-    compileComp
+    compileComp, compileDec
 ) where
 
 import AST
@@ -97,6 +97,35 @@ data IdNames = IdNames {
     affs :: [Name],
     counters :: [Name]
 }
+
+-- compileAction :: Action -> Reader IdNames (Doc, [Doc])
+-- compileAction
+
+-- | Compiles a Decision into a call to a python function for getting the decision results. The list of Docs is for any function definitions that are required.
+compileDec :: Decision -> Reader IdNames (Doc, [Doc])
+compileDec (Vote voterl voteel sv) = do
+    voterList <- compileIdentifierList voterl 1
+    voteeList <- compileIdentifierList voteel 1
+    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "vote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
+compileDec (Nomination n nommers pool sv) = do
+    nommerList <- compileIdentifierList nommers 1
+    poolList <- compileIdentifierList pool 1
+    return (vcat [fst nommerList, text "nommerList = idList1", fst poolList, text "poolList = idList1", text "nominate" <> parens (text "nommerList," <+> integer n <> comma <+> text "poolList," <+> text (show sv))], snd nommerList ++ snd poolList)
+compileDec (Allocation nm il) = do
+    ids <- ask
+    ildoc <- compileIdentifierList il 1
+    if nm `elem` (counters ids)
+        then return (vcat [fst ildoc, text "allocate" <> parens (text "idList1," <+> doubleQuotes (text nm))], snd ildoc)
+        else error ("Reference to non-existent counter " ++ nm)
+compileDec (DirectedVote voterl voteel sv) = do
+    voterList <- compileIdentifierList voterl 1
+    voteeList <- compileIdentifierList voteel 1
+    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "directedVote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
+-- compileDec (Uses id yespl nopl) = do
+--     iddoc <- compileIdentifier id
+--     yesdoc <- compilePhaseList yespl
+--     nodoc <- compilePhaseList nopl
+--     return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon,nest 4 (fst yespl), text "else:", nest 4 (fst nopl)], snd iddoc ++ snd yesdoc ++ snd nodoc)
 
 -- | Compiles a Competition into a call to a python function for getting the competition results. The list of Docs is for any function definitions that are required.
 compileComp :: Competition -> Reader IdNames (Doc, [Doc])
