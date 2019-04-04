@@ -7,7 +7,7 @@ module Compiler (
     compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
-    compileComp, compileDec
+    compileComp, compileDec, compileAction
 ) where
 
 import AST
@@ -98,8 +98,9 @@ data IdNames = IdNames {
     counters :: [Name]
 }
 
--- compileAction :: Action -> Reader IdNames (Doc, [Doc])
--- compileAction
+compileAction :: Action -> Reader IdNames (Doc, [Doc])
+compileAction (Comp c) = compileComp c
+compileAction (Dec d) = compileDec d
 
 -- | Compiles a Decision into a call to a python function for getting the decision results. The list of Docs is for any function definitions that are required.
 compileDec :: Decision -> Reader IdNames (Doc, [Doc])
