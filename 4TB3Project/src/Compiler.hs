@@ -2,9 +2,11 @@
 This provides functions for compiling a Game AST into a Python program that runs the game.
 -}
 module Compiler (
-    IdNames(..), compileAffiliations, compileCounter, compileCountersFromAttList, 
-    compileCounters, compilePlayer, compilePlayers, compileTeam, compileTeams,
-    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue, compileIdentifier, compileIdentifiers, compileIdVal
+    IdNames(..), compileAffiliations, compileCounter,
+    compileCountersFromAttList, compileCounters, compilePlayer, compilePlayers,
+    compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
+    compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
+    compileIdentifiers, compileIdVal, compileIdVals,
 ) where
 
 import AST
@@ -96,12 +98,22 @@ data IdNames = IdNames {
 }
 
 -- | Compiles an IdentifierList into a python list containing the desired player(s). The list is stored in a variable whose name is represented by the first Doc. The second Doc is the definition of the list and the list of Docs is for any function definitions that are required.
--- compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, Doc, [Doc])
+compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, Doc, [Doc])
 
 -- | Compiles a list of IdentifierVals into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
--- compileIdVals :: [IdentifierVal] -> Reader IdNames (Doc, [Doc])
+compileIdVals :: [IdentifierVal] -> Reader IdNames (Doc, [Doc])
+compileIdVals idv = do
+    inclList <- concatIdVals idv
+    return $ (vcat [text "includeList" <+> equals <+> brackets empty,
+              fst inclList], snd inclList)
+        where concatIdVals :: [IdentifierVal] -> Reader IdNames (Doc, [Doc])
+              concatIdVals [] = return (empty, [])
+              concatIdVals (iv:ivs) = do
+                ivdoc <- compileIdVal iv
+                ivsdoc <- concatIdVals ivs
+                return $ (vcat [fst ivdoc, text "includeList += idVal", fst ivsdoc], snd ivdoc ++ snd ivsdoc)
 
--- | Compiles an IdentifierVal into python code that returns a list containing the Identifier repeated Value times. The returned list of Docs is for any function definitions that are required.
+-- | Compiles an IdentifierVal into python code that returns a list containing the Identifier repeated Value times. The returned list of Docs is for any function definitions that are required
 compileIdVal :: IdentifierVal -> Reader IdNames (Doc, [Doc])
 compileIdVal (IdVal id (Num 1)) = do
     iddoc <- compileIdentifier id
@@ -111,7 +123,7 @@ compileIdVal (IdVal id v) = do
     vdoc <- compileValue v
     return $ (vcat [
         text "idVal" <+> equals <+> brackets empty,
-        text "for player in" <+> fst iddoc <> colon <+> text "idVal +" <> equals <+> brackets (text "player") <+> text "*" <+> vdoc], snd iddoc)
+        text "for player in" <+> fst iddoc <> colon <+> text "idVal +=" <+> brackets (text "player") <+> text "*" <+> vdoc], snd iddoc)
 
 -- | Compiles a list of Identifiers into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
 compileIdentifiers :: [Identifier] -> Reader IdNames (Doc, [Doc])

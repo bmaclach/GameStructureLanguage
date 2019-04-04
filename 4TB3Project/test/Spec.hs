@@ -620,4 +620,9 @@ main = hspec $ do
                 runReader (compileIdVal (IdVal Everyone (Num 1))) ids `shouldBe` (text "idVal = game.playerList", [])
             it "compiles any other IdentifierVal by repeating each Identifier Value times" $
                 runReader (compileIdVal (IdVal Everyone (Num 2))) ids `shouldBe` (text "idVal = []\nfor player in game.playerList: idVal += [player] * 2", [])
+        describe "compileIdVals" $ do
+            it "compiles an empty list of IdentifierVals by assigning includeList to be empty" $
+                runReader (compileIdVals []) ids `shouldBe` (text "includeList = []", [])
+            it "compiles a non-empty IdentifierVal list by appending each compiled IdentifierVal onto the includeList" $
+                runReader (compileIdVals [IdVal Everyone (Num 1), IdVal (N "Brooks") (Count "votes")]) ids `shouldBe` (text "includeList = []\nidVal = game.playerList\nincludeList += idVal\nidVal = []\nfor player in [x for x in game.playerList if x.name == \"Brooks\"]: idVal += [player] * player.counters[\"votes\"]\nincludeList += idVal", [])
         
