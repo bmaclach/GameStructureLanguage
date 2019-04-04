@@ -7,15 +7,15 @@ module Compiler (
     compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
-    compileComp, compileDec, compileAction
+    compileComp, compileDec, compileAction, compileTiebreaker
 ) where
 
 import AST
 import PreCompiler (getAffsFromAttList)
 
 import Text.PrettyPrint.HughesPJ (Doc, (<+>), (<>), ($$), braces, brackets, 
-    colon, comma, doubleQuotes, empty, equals, hcat, integer, parens, space, 
-    text, vcat)
+    colon, comma, doubleQuotes, empty, equals, hcat, integer, nest, parens,
+    space, text, vcat)
 
 import Prelude hiding ((<>))
 import Data.List (intersperse)
@@ -126,7 +126,8 @@ compileDec (DirectedVote voterl voteel sv) = do
 --     iddoc <- compileIdentifier id
 --     yesdoc <- compilePhaseList yespl
 --     nodoc <- compilePhaseList nopl
---     return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon,nest 4 (fst yespl), text "else:", nest 4 (fst nopl)], snd iddoc ++ snd yesdoc ++ snd nodoc)
+--     return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon,nest 4 (fst yespl), text "else:", nest 4 (fst nopl)], snd iddoc ++ snd yesdoc ++ snd nodoc) 
+    -- need to delete results if they happen
 
 -- | Compiles a Competition into a call to a python function for getting the competition results. The list of Docs is for any function definitions that are required.
 compileComp :: Competition -> Reader IdNames (Doc, [Doc])
@@ -246,8 +247,19 @@ compileIdentifier (Least nm il Nothing) n = do
 
 
 -- | Compiles a Tiebreaker into python code for the name of a function (the first Doc in the output) and the definition of that function (the second Doc in the output). The integer input represents the level of nesting, needed to generate unique variable names.
--- compileTiebreaker :: Tiebreaker -> Integer -> Reader Ids (Doc, [Doc])
--- compileTiebreaker (Tiebreak)
+compileTiebreaker :: Tiebreaker -> Integer -> Reader IdNames (Doc, [Doc])
+compileTiebreaker (Tiebreak nm Nothing id) n = do
+    iddoc <- compileIdentifier id n
+    return $ (text nm <> text "Tiebreaker", [vcat [text "def" <+> text nm <> text "Tiebreaker" <> parens (text "tied") <> colon, nest 4 (fst iddoc), nest 4 (text "return ident[0]")]] ++ snd iddoc)
+compileTiebreaker (Tiebreak nm (Just a) id) n = do
+    iddoc <- compileIdentifier id n
+    adoc <- compileAction a
+    return $ (text nm <> text "Tiebreaker", [vcat [text "def" <+> text nm <> text "Tiebreaker" <> parens (text "tied") <> colon, nest 4 (fst adoc), nest 4 (fst iddoc), nest 4 (delResultIfNeeded a), nest 4 (text "return ident[0]")]] ++ snd iddoc ++ snd adoc)
+    where delResultIfNeeded (Comp _) = text "del game.compResults[-1]"
+          delResultIfNeeded (Dec (Vote _ _ _)) = text "del game.voteResults[-1]"
+          delResultIfNeeded (Dec (DirectedVote _ _ _)) = text "del game.voteResults[-1]"
+          delResultIfNeeded (Dec (Allocation _ _)) = text "del game.allocateResults[-1]"
+          delResultIfNeeded ac = empty
 
 
 -- | Compiles a Value into python code that returns the desired numeric value
