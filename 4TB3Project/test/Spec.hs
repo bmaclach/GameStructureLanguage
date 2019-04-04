@@ -625,4 +625,7 @@ main = hspec $ do
                 runReader (compileIdVals []) ids `shouldBe` (text "includeList = []", [])
             it "compiles a non-empty IdentifierVal list by appending each compiled IdentifierVal onto the includeList" $
                 runReader (compileIdVals [IdVal Everyone (Num 1), IdVal (N "Brooks") (Count "votes")]) ids `shouldBe` (text "includeList = []\nidVal = game.playerList\nincludeList += idVal\nidVal = []\nfor player in [x for x in game.playerList if x.name == \"Brooks\"]: idVal += [player] * player.counters[\"votes\"]\nincludeList += idVal", [])
+        describe "compileIdentifierList" $ do
+            it "compiles an IdentifierList by filtering the excludeList from the includeList" $
+                runReader (compileIdentifierList (IdList [IdVal Everyone (Num 1)] [N "Brooks"])) ids `shouldBe` (text "includeList = []\nidVal = game.playerList\nincludeList += idVal\nexcludeList = [x for x in game.playerList if x.name == \"Brooks\"]\nidList = [x for x in includeList if x not in excludeList]", [])
         

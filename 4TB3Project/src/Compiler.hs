@@ -6,7 +6,7 @@ module Compiler (
     compileCountersFromAttList, compileCounters, compilePlayer, compilePlayers,
     compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
-    compileIdentifiers, compileIdVal, compileIdVals,
+    compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList
 ) where
 
 import AST
@@ -97,8 +97,12 @@ data IdNames = IdNames {
     counters :: [Name]
 }
 
--- | Compiles an IdentifierList into a python list containing the desired player(s). The list is stored in a variable whose name is represented by the first Doc. The second Doc is the definition of the list and the list of Docs is for any function definitions that are required.
-compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, Doc, [Doc])
+-- | Compiles an IdentifierList into a python list containing the desired player(s) by filtering out the excludeList from the includeList. The list of Docs is for any function definitions that are required
+compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, [Doc])
+compileIdentifierList (IdList il el) = do
+    inclList <- compileIdVals il
+    exclList <- compileIdentifiers el
+    return $ (vcat [fst inclList, fst exclList, text "idList =" <+> brackets (text "x for x in includeList if x not in excludeList")], snd inclList ++ snd exclList)
 
 -- | Compiles a list of IdentifierVals into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
 compileIdVals :: [IdentifierVal] -> Reader IdNames (Doc, [Doc])
