@@ -34,8 +34,9 @@ class Game:
         for player in compPlayers:
             pts = int(input("What did " + player.name + " score in this round?\n"))
             compDict["scores"].update({player: pts})
-        sortedPlayers = sorted(compDict["scores"], key=lambda x : x["score"])
         compDict.update({"loser": min(compDict["scores"], key=compDict["scores"].get), "winner": min(compDict["scores"], key=compDict["scores"].get)})
+        for player in [x for x in self.playerList if x not in compPlayers]:
+            compDict["scores"].update({player: 0})
         self.compResults.append(compDict)
 
     def getTeamCompResults(self, compTeams, winnerNeeded, loserNeeded):

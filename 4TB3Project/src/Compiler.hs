@@ -98,6 +98,21 @@ data IdNames = IdNames {
 -- | Compiles an IdentifierList into a python list containing the desired player(s). The list is stored in a variable whose name is represented by the first Doc. The second Doc is the definition of the list and the list of Docs is for any function definitions that are required.
 -- compileIdentifierList :: IdentifierList -> Reader IdNames (Doc, Doc, [Doc])
 
+-- | Compiles a list of IdentifierVals into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
+-- compileIdVals :: [IdentifierVal] -> Reader IdNames (Doc, [Doc])
+
+-- | Compiles an IdentifierVal into python code that returns a list containing the Identifier repeated Value times. The returned list of Docs is for any function definitions that are required.
+compileIdVal :: IdentifierVal -> Reader IdNames (Doc, [Doc])
+compileIdVal (IdVal id (Num 1)) = do
+    iddoc <- compileIdentifier id
+    return $ (text "idVal" <+> equals <+> fst iddoc, snd iddoc)
+compileIdVal (IdVal id v) = do
+    iddoc <- compileIdentifier id
+    vdoc <- compileValue v
+    return $ (vcat [
+        text "idVal" <+> equals <+> brackets empty,
+        text "for player in" <+> fst iddoc <> colon <+> text "idVal +" <> equals <+> brackets (text "player") <+> text "*" <+> vdoc], snd iddoc)
+
 -- | Compiles a list of Identifiers into python code that returns the desired player(s). The returned list of Docs is for any function definitions that are required
 compileIdentifiers :: [Identifier] -> Reader IdNames (Doc, [Doc])
 compileIdentifiers il = do
@@ -180,9 +195,9 @@ compileValue (Count nm) = do
     if nm `elem` (counters ids) 
         then return $ text "player.counters" <> brackets (doubleQuotes (text nm))
         else error ("Reference to non-existent counter " ++ nm)
-compileValue (Result (Cmp cr)) = return $ compileCompRef cr <> brackets (doubleQuotes (text "scores"))
-compileValue (Result (Vt vr)) = return $ compileVoteRef vr <> brackets (doubleQuotes (text "votes"))
-compileValue (Result (Alloc ar)) = return $ compileAllocRef ar <> brackets (doubleQuotes (text "allocated"))
+compileValue (Result (Cmp cr)) = return $ compileCompRef cr <> brackets (doubleQuotes (text "scores")) <> brackets (text "player") <+> text "if player in" <+> compileCompRef cr <> brackets (doubleQuotes (text "scores")) <> text ".keys() else" <+> compileCompRef cr <> brackets (doubleQuotes (text "scores")) <> brackets (brackets (text "x for x in game.teamList if x in player.affiliations")<> brackets (text "0")) 
+compileValue (Result (Vt vr)) = return $ compileVoteRef vr <> brackets (doubleQuotes (text "votes")) <> brackets (text "player")
+compileValue (Result (Alloc ar)) = return $ compileAllocRef ar <> brackets (doubleQuotes (text "allocated")) <> brackets (text "player")
 
 -- | Compiles a CompRef into python code for accessing the compResults array at the referenced index. Note that indexing starts at 1 for the game language.
 compileCompRef :: CompRef -> Doc

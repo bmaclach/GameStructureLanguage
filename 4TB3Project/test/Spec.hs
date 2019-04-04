@@ -582,11 +582,11 @@ main = hspec $ do
             it "compiles a Count into an access of a player's counter" $
                 runReader (compileValue (Count "points")) ids `shouldBe` text "player.counters[\"points\"]"
             it "compiles a Result into an access of the compResults array scores" $
-                runReader (compileValue (Result (Cmp (CRef 0)))) ids `shouldBe` text "compResults[-1][\"scores\"]"
+                runReader (compileValue (Result (Cmp (CRef 0)))) ids `shouldBe` text "compResults[-1][\"scores\"][player] if player in compResults[-1][\"scores\"].keys() else compResults[-1][\"scores\"][[x for x in game.teamList if x in player.affiliations][0]]"
             it "compiles a Result into an access of the voteResults array votes" $
-                runReader (compileValue (Result (Vt (VRef 0)))) ids `shouldBe` text "voteResults[-1][\"votes\"]"
+                runReader (compileValue (Result (Vt (VRef 0)))) ids `shouldBe` text "voteResults[-1][\"votes\"][player]"
             it "compiles a Result into an access of the allocateResults array allocated" $
-                runReader (compileValue (Result (Alloc (ARef 0)))) ids `shouldBe` text "allocateResults[-1][\"allocated\"]"
+                runReader (compileValue (Result (Alloc (ARef 0)))) ids `shouldBe` text "allocateResults[-1][\"allocated\"][player]"
         describe "compileIdentifier" $ do
             it "compiles Everyone into the playerList" $
                 runReader (compileIdentifier Everyone) ids `shouldBe` (text "game.playerList", [])
