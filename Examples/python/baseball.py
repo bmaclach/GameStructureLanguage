@@ -1,7 +1,7 @@
 from gamelib import *
 
 def roundType1():
-    game.getScoredTeamCompResults(game.teamList)
+    game.getScoredTeamCompResults(list(dict.fromkeys([x for x in game.teamList for y in game.playerList if x in y.affiliations])))
     for player in game.playerList:
         team = [x for x in game.teamList if x in player.affiliations][0]
         player.updateCounter(game.compResults[0]["scores"][team], "points")

@@ -6,7 +6,8 @@ module Compiler (
     compileCountersFromAttList, compileCounters, compilePlayer, compilePlayers,
     compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
-    compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList
+    compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
+    compileComp
 ) where
 
 import AST
@@ -96,6 +97,21 @@ data IdNames = IdNames {
     affs :: [Name],
     counters :: [Name]
 }
+
+-- | Compiles a Competition into a call to a python function for getting the competition results. The list of Docs is for any function definitions that are required.
+compileComp :: Competition -> Reader IdNames (Doc, [Doc])
+compileComp (Scored Team il) = do
+    ildoc <- compileIdentifierList il 1
+    return $ (vcat [fst ildoc, text "game.getScoredTeamCompResults" <> parens (text "list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))))], snd ildoc)
+compileComp (Scored Individual il) = do
+    ildoc <- compileIdentifierList il 1
+    return $ (vcat [fst ildoc, text "game.getScoredCompResults" <> parens (text "idList1")], snd ildoc)
+compileComp (Placed Team il wn ln) = do
+    ildoc <- compileIdentifierList il 1
+    return $ (vcat [fst ildoc, text "game.getTeamCompResults" <> parens (text "list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))) <> comma <+> text (show wn) <> comma <+> text (show ln))], snd ildoc)
+compileComp (Placed Individual il wn ln) = do
+    ildoc <- compileIdentifierList il 1
+    return $ (vcat [fst ildoc, text "game.getCompResults" <> parens (text "idList1" <> comma <+> text (show wn) <> comma <+> text (show ln))], snd ildoc)    
 
 -- | Compiles an IdentifierList into a python list containing the desired player(s) by filtering out the excludeList from the includeList. The integer input represents the level of nesting, needed to generate unique variable names. The list of Docs is for any function definitions that are required
 compileIdentifierList :: IdentifierList -> Integer -> Reader IdNames (Doc, [Doc])

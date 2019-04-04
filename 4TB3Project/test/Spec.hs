@@ -632,4 +632,13 @@ main = hspec $ do
         describe "compileIdentifierList" $ do
             it "compiles an IdentifierList by filtering the excludeList from the includeList" $
                 runReader (compileIdentifierList (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) 1) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]", [])
-        
+        describe "compileComp" $ do
+            it "compiles a Scored Team Competition into a call to a python function to get the competition results" $
+                runReader (compileComp (Scored Team (IdList [IdVal Everyone (Num 1)] []))) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredTeamCompResults(list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations])))", [])
+            it "compiles a Scored Individual Competition into a call to a python function to get the competition results" $
+                runReader (compileComp (Scored Individual (IdList [IdVal Everyone (Num 1)] []))) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)", [])
+            it "compiles a Placed Team Competition into a call to a python function to get the competition results" $
+                runReader (compileComp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getTeamCompResults(list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations])), True, False)", [])
+            it "compiles a Placed Individual Competition into a call to a python function to get the competition results" $
+                runReader (compileComp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True False)) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getCompResults(idList1, True, False)", [])
+    
