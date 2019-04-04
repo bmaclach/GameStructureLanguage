@@ -590,6 +590,8 @@ main = hspec $ do
         describe "compileIdentifier" $ do
             it "compiles Everyone into the playerList" $
                 runReader (compileIdentifier Everyone 1) ids `shouldBe` (text "ident = game.playerList", [])
+            it "compiles Chance into a call to randomDraw" $
+                runReader (compileIdentifier (Chance (IdList [IdVal Everyone (Num 2)] [N "Brooks"])) 1) ids `shouldBe` (text "includeList2 = []\nident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2\nincludeList2 += idVal\nexcludeList2 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [randomDraw(idList2)]", [])
             it "compiles Nominated into a list of nominated players" $
                 runReader (compileIdentifier Nominated 1) ids `shouldBe` (text "ident = [x for x in game.playerList if \"nominated\" in x.affiliations]", [])
             it "compiles Tied into local variable tied for tiebreaker functions" $
@@ -608,6 +610,10 @@ main = hspec $ do
                 runReader (compileIdentifier (Majority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], True)]", [])
             it "compiles Minority vote receiver with no tiebreaker into a list containing the minority vote receiver" $
                 runReader (compileIdentifier (Minority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], False)]", [])
+            it "compiles a Most with no tiebreaker into a list containing the player with the most of the counter" $
+                runReader (compileIdentifier (Most "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", True)]", [])
+            it "compiles a Most with no tiebreaker into a list containing the player with the most of the counter" $
+                runReader (compileIdentifier (Least "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", False)]", [])
         describe "compileIdentifiers" $ do
             it "compiles an empty list of identifiers as an empty excludeList" $
                 runReader (compileIdentifiers [] 1) ids `shouldBe` (text "excludeList1 = []", [])
