@@ -615,4 +615,9 @@ main = hspec $ do
                 runReader (compileIdentifiers [Everyone]) ids `shouldBe` (text "excludeList = game.playerList", [])
             it "compiles a multiple-element list of identifiers, concatenates them and assigns them to excludeList" $
                 runReader (compileIdentifiers [N "Brooks", Everyone]) ids `shouldBe` (text "excludeList = [x for x in game.playerList if x.name == \"Brooks\"] + game.playerList", [])
+        describe "compileIdVal" $ do
+            it "compiles an IdentifierVal with Value Num 1 just by assigning the Identifier to idVal variable" $
+                runReader (compileIdVal (IdVal Everyone (Num 1))) ids `shouldBe` (text "idVal = game.playerList", [])
+            it "compiles any other IdentifierVal by repeating each Identifier Value times" $
+                runReader (compileIdVal (IdVal Everyone (Num 2))) ids `shouldBe` (text "idVal = []\nfor player in game.playerList: idVal += [player] * 2", [])
         

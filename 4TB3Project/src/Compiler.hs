@@ -4,7 +4,7 @@ This provides functions for compiling a Game AST into a Python program that runs
 module Compiler (
     IdNames(..), compileAffiliations, compileCounter, compileCountersFromAttList, 
     compileCounters, compilePlayer, compilePlayers, compileTeam, compileTeams,
-    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue, compileIdentifier, compileIdentifiers
+    compilePlayerInfo, compileCompRef, compileVoteRef, compileAllocRef, compileValue, compileIdentifier, compileIdentifiers, compileIdVal
 ) where
 
 import AST
