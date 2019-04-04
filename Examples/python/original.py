@@ -11,11 +11,11 @@ def roundType1():
     game.compResults[0]["winner"].updateCounter(3, "votes")
     game.allocate(game.playerList, "votes")
     directedVoters = []
-    for allocation in game.allocateResults[0]:
-        directedVoters += [allocation["player"]] * allocation["allocated"]
+    for p, a in game.allocateResults[0].items():
+        directedVoters += [p] * a
     game.directedVote(directedVoters, game.playerList, True)
-    for playerResult in game.voteResults[0]:
-        playerResult["player"].updateCounter(playerResult["votes"], "position")
+    for player in game.playerList:
+        player.updateCounter(game.voteResults[0][player], "position")
     game.eliminate(getMinOrMax(game.playerList, "position", False, lowVoteTiebreaker))
 
 game = Game()

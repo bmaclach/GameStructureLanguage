@@ -37,9 +37,8 @@ def roundType1():
     loser = game.compResults[0]["loser"]
     game.vote([x for x in game.playerList if loser in x.affiliations], [x for x in game.playerList if loser in x.affiliations])
     game.eliminate(getVoteMinOrMax(game.voteResults[0], True, reVoteTiebreaker))
-    for playerResults in game.voteResults[0]:
-        if playerResults["player"] in [x for x in game.playerList if loser in x.affiliations]:
-            playerResults["player"].updateCounter(playerResults["votes"], "votesAgainst")
+    for player in [x for x in game.playerList if loser in x.affiliations]:
+        player.updateCounter(game.voteResults[0][player], "votesAgainst")
 
 def roundType2():
     swap(["Kucha", "Ogakor"], [], game.playerList, False)
@@ -49,8 +48,8 @@ def roundType3():
     game.getCompResults(game.playerList, True, False)
     game.vote(game.playerList, [x for x in game.playerList if x != game.compResults[0]["winner"]])
     game.eliminate(getVoteMinOrMax(game.voteResults[0], True, reVoteTiebreaker2))
-    for playerResults in game.voteResults[0]:
-        playerResults["player"].updateCounter(playerResults["votes"], "votesAgainst")
+    for player in game.playerList:
+        player.updateCounter(game.voteResults[0][player], "votesAgainst")
 
 def roundType4():
     merge(["Kucha", "Ogakor"], "Merged", game.playerList)

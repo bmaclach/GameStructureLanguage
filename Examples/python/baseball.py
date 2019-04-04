@@ -2,10 +2,9 @@ from gamelib import *
 
 def roundType1():
     game.getScoredTeamCompResults(game.teamList)
-    for teamScore in game.compResults[0]["scores"]:
-        teamPlayers = [x for x in game.playerList if teamScore["team"] in x.affiliations]
-        for player in teamPlayers:
-            player.updateCounter(teamScore["score"], "points")
+    for player in game.playerList:
+        team = [x for x in game.teamList if x in player.affiliations][0]
+        player.updateCounter(game.compResults[0]["scores"][team], "points")
 
 game = Game()
 

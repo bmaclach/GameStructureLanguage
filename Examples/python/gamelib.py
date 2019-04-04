@@ -19,26 +19,23 @@ class Game:
         print("Team competition between:")
         for team in compTeams:
             print(team)
-        compDict = {"scores": []}
+        compDict = {"scores": {}}
         for team in compTeams:
             pts = int(input("What did " + team + " score in this round?\n"))
-            compDict["scores"].append({"team": team,
-                                       "score": pts})
-        sortedTeams = sorted(compDict["scores"], key=lambda x : x["score"])
-        compDict.update({"loser": sortedTeams[0]["team"], "winner": sortedTeams[-1]["team"]})
+            compDict["scores"].update({team: pts})
+        compDict.update({"loser": min(compDict["scores"], key=compDict["scores"].get), "winner": max(compDict["scores"], key=compDict["scores"].get)})
         self.compResults.append(compDict)
 
     def getScoredCompResults(self, compPlayers):
         print("Competition between:")
         for player in compPlayers:
             print(player.name)
-        compDict = {"scores": []}
+        compDict = {"scores": {}}
         for player in compPlayers:
             pts = int(input("What did " + player.name + " score in this round?\n"))
-            compDict["scores"].append({"player": player,
-                                       "score": pts})
+            compDict["scores"].update({player: pts})
         sortedPlayers = sorted(compDict["scores"], key=lambda x : x["score"])
-        compDict.update({"loser": sortedTeams[0]["player"], "winner": sortedTeams[-1]["player"]})
+        compDict.update({"loser": min(compDict["scores"], key=compDict["scores"].get), "winner": min(compDict["scores"], key=compDict["scores"].get)})
         self.compResults.append(compDict)
 
     def getTeamCompResults(self, compTeams, winnerNeeded, loserNeeded):
@@ -139,7 +136,7 @@ class Game:
             print(votee.name)
         voteeNames = [x.name for x in votees]
         votes = []
-        voteDict = []
+        voteDict = {}
         for voter in voters:
             haveVote = False
             while not haveVote:
@@ -151,10 +148,9 @@ class Game:
                     haveVote = True
                 else:
                     print(playerVote + " is not eligible to be voted for!")
-        for votee in votees:
-            n = votes.count(votee.name)
-            voteDict.append({"player": votee,
-                            "votes": n})
+        for player in self.playerList:
+            n = votes.count(player.name)
+            voteDict.update({player: n})
         self.voteResults.append(voteDict)
 
     def nominate(self, nominators, numNominated, pool, selfVote=False):
@@ -181,12 +177,11 @@ class Game:
 
     def allocate(self, players, allocated):
         print("Allocation of " + allocated + ".")
-        allocDict = []
+        allocDict = {}
         for player in players:
             numAlloc = int(input("How many " + allocated + " does " + player.name + " allocate?\n"))
             actAlloc = - player.updateCounter(- numAlloc, allocated)
-            allocDict.append({"player": player,
-                            "allocated": actAlloc})
+            allocDict.update({player: actAlloc})
         self.allocateResults.append(allocDict)
 
     def directedVote(self, voters, votees, selfVote=False):
@@ -196,7 +191,7 @@ class Game:
         voteeNames = [x.name for x in votees]
         forVotes = []
         againstVotes = []
-        voteDict = []
+        voteDict = {}
         for voter in voters:
             haveVote = False
             while not haveVote:
@@ -218,10 +213,9 @@ class Game:
                     againstVotes.append(playerVote)
                 else:
                     print(decision + " is not a valid answer!")
-        for votee in votees:
-            n = forVotes.count(votee.name) - againstVotes.count(votee.name)
-            voteDict.append({"player": votee,
-                            "votes": n})
+        for player in self.playerList:
+            n = forVotes.count(player.name) - againstVotes.count(player.name)
+            voteDict.update({player: n})
         self.voteResults.append(voteDict)
 
     def eliminate(self, player):
@@ -325,18 +319,16 @@ def uses(player):
 
 # minOrMax true for majority, false for minority
 def getVoteMinOrMax(votes, minOrMax, tiebreaker = defaultTiebreaker):
-    sortedVotes = sorted(votes, key=lambda x: x["votes"], reverse=minOrMax)
-    if sortedVotes[0]["votes"] == sortedVotes[1]["votes"]:
-        maxVotes = sortedVotes[0]["votes"]
-        tied = [sortedVotes[0]["player"], sortedVotes[1]["player"]]
-        for svote in sortedVotes[2:]:
-            if svote["votes"] == maxVotes:
-                tied.append(svote["player"])
-            else:
-                break
+    votedPlayer = max(votes, key=votes.get) if minOrMax else min(votes, key=votes.get)
+    voteAmt = votes[votedPlayer]
+    tied = []
+    for p, v in votes.items():
+        if v == voteAmt:
+            tied += [p]
+    if len(tied) > 1:
         return tiebreaker(tied)
     else:
-        return sortedVotes[0]["player"]
+        return votedPlayer
 
 # minOrMax true for Max, false for min
 def getMinOrMax(players, metric, minOrMax, tiebreaker=defaultTiebreaker):
