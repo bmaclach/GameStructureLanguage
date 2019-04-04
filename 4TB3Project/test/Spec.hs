@@ -613,12 +613,20 @@ main = hspec $ do
                 runReader (compileIdentifier (Loser (CRef 0)) 1) ids `shouldBe` (text "ident = [x for x in game.playerList if x == compResults[-1][\"loser\"] or compResults[-1][\"loser\"] in x.affiliations]", [])
             it "compiles Majority vote receiver with no tiebreaker into a list containing the majority vote receiver" $
                 runReader (compileIdentifier (Majority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], True)]", [])
+            it "compiles Majority vote receiver with a tiebreaker into a list containing the majority vote receiver" $
+                runReader (compileIdentifier (Majority (VRef 0) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], True, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
             it "compiles Minority vote receiver with no tiebreaker into a list containing the minority vote receiver" $
                 runReader (compileIdentifier (Minority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], False)]", [])
+            it "compiles Minority vote receiver with a tiebreaker into a list containing the minority vote receiver" $
+                runReader (compileIdentifier (Minority (VRef 0) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(voteResults[-1], False, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
             it "compiles a Most with no tiebreaker into a list containing the player with the most of the counter" $
                 runReader (compileIdentifier (Most "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", True)]", [])
-            it "compiles a Most with no tiebreaker into a list containing the player with the most of the counter" $
+            it "compiles a Most with a tiebreaker into a list containing the player with the most of the counter" $
+                runReader (compileIdentifier (Most "votes" (IdList [] [Everyone]) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", True, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
+            it "compiles a Least with no tiebreaker into a list containing the player with the most of the counter" $
                 runReader (compileIdentifier (Least "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", False)]", [])
+            it "compiles a Least with a tiebreaker into a list containing the player with the least of the counter" $
+                runReader (compileIdentifier (Least "votes" (IdList [] [Everyone]) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", False, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
         describe "compileIdentifiers" $ do
             it "compiles an empty list of identifiers as an empty excludeList" $
                 runReader (compileIdentifiers [] 1) ids `shouldBe` (text "excludeList1 = []", [])

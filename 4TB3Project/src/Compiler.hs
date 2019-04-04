@@ -211,39 +211,39 @@ compileIdentifier (A af) _ = do
 compileIdentifier (Winner cr) _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations"), [])
 compileIdentifier (Loser cr) _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations"), [])
 compileIdentifier (Majority vr Nothing) _ = return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True")), [])
--- compileIdentifier (Majority vr (Just tb)) n = do
---     tbdoc <- compileTiebreaker tb n
---     return $ (text "ident = getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> fst tbdoc), snd tbdoc)
+compileIdentifier (Majority vr (Just tb)) n = do
+    tbdoc <- compileTiebreaker tb n
+    return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> fst tbdoc)), snd tbdoc)
 compileIdentifier (Minority vr Nothing) _ = return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False")), [])
--- compileIdentifier (Minority vr (Just tb)) n = do
---     tbdoc <- compileTiebreaker tb n
---     return $ (text "ident = getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> fst tbdoc), snd tbdoc)
+compileIdentifier (Minority vr (Just tb)) n = do
+    tbdoc <- compileTiebreaker tb n
+    return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> fst tbdoc)), snd tbdoc)
 compileIdentifier (Most nm il Nothing) n = do
     ids <- ask
     ildoc <- compileIdentifierList il (n+1)
     if nm `elem` (counters ids) 
         then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "True"))], snd ildoc)
         else error ("Reference to non-existent counter " ++ nm)
--- compileIdentifier (Most nm il (Just tb)) n = do
---     ids <- ask
---     ildoc <- compileIdentifierList il (n+1)
---     tbdoc <- compileTiebreaker tb n
---     if nm `elem` (counters ids) 
---         then return $ (vcat [fst ildoc, text "ident = getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> text nm <> comma <+> text "True" <> comma <+> fst tbdoc)], snd ildoc ++ snd tbdoc)
---         else error ("Reference to non-existent counter " ++ nm)
+compileIdentifier (Most nm il (Just tb)) n = do
+    ids <- ask
+    ildoc <- compileIdentifierList il (n+1)
+    tbdoc <- compileTiebreaker tb n
+    if nm `elem` (counters ids) 
+        then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "True" <> comma <+> fst tbdoc))], snd ildoc ++ snd tbdoc)
+        else error ("Reference to non-existent counter " ++ nm)
 compileIdentifier (Least nm il Nothing) n = do
     ids <- ask
     ildoc <- compileIdentifierList il (n+1)
     if nm `elem` (counters ids) 
         then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "False"))], snd ildoc)
         else error ("Reference to non-existent counter " ++ nm)
--- compileIdentifier (Least nm il (Just tb)) n = do
---     ids <- ask
---     ildoc <- compileIdentifierList il (n+1)
---     tbdoc <- compileTiebreaker tb n
---     if nm `elem` (counters ids) 
---         then return $ (vcat [fst ildoc, text "ident = getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> text nm <> comma <+> text "False" <> comma <+> fst tbdoc)], snd ildoc ++ snd tbdoc)
---         else error ("Reference to non-existent counter " ++ nm)
+compileIdentifier (Least nm il (Just tb)) n = do
+    ids <- ask
+    ildoc <- compileIdentifierList il (n+1)
+    tbdoc <- compileTiebreaker tb n
+    if nm `elem` (counters ids) 
+        then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "False" <> comma <+> fst tbdoc))], snd ildoc ++ snd tbdoc)
+        else error ("Reference to non-existent counter " ++ nm)
 
 
 -- | Compiles a Tiebreaker into python code for the name of a function (the first Doc in the output) and the definition of that function (the second Doc in the output). The integer input represents the level of nesting, needed to generate unique variable names.
