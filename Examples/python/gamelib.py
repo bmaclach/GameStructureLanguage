@@ -297,6 +297,20 @@ class Player:
                 print("The proposed change would bring " + counter + " above the maximum. Cutting off the change at " + str(change) + " instead.")
         self.counters[counter] += change
         return change
+    
+    def setCounter(self, val, counter):
+        if counter in self.mins.keys() or counter in self.maxs.keys():
+            if counter in self.mins.keys():
+                if val < self.mins[counter]:
+                    self.counters[counter] = self.mins[counter]
+                    print("Attempt to set " + counter + " to value below the minimum. Setting to the minimum, " + str(self.mins[counter]) + "instead.")
+            if counter in self.maxs.keys():
+                if val > self.maxs[counter]:
+                    self.counters[counter] = self.maxs[counter]
+                    print("Attempt to set " + counter + " to value above the maximum. Setting to the maximum, " + str(self.maxs[counter]) + "instead.")
+        else:
+            self.counters[counter] = val
+        
 
 def defaultTiebreaker(tied):
     badRock = random.randint(0, len(tied)-1)

@@ -8,7 +8,7 @@ module Compiler (
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
     compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
-    compileAffUpdate
+    compileAffUpdate, compileCounterUpdate
 ) where
 
 import AST
@@ -99,6 +99,28 @@ data IdNames = IdNames {
     counters :: [Name]
 }
 
+-- | Compiles a CounterUpdate into python code for updating a counter.
+compileCounterUpdate :: CounterUpdate -> Reader IdNames Doc
+compileCounterUpdate (Increase nm v) = do
+    ids <- ask
+    vdoc <- compileValue v
+    if nm `elem` (counters ids) 
+        then return $ text "for player in idList1: player.updateCounter" <> parens (vdoc <> comma <+> doubleQuotes (text nm))
+        else error ("Reference to non-existent counter " ++ nm)
+compileCounterUpdate (Decrease nm v) = do
+    ids <- ask
+    vdoc <- compileValue v
+    if nm `elem` (counters ids) 
+        then return $ text "for player in idList1: player.updateCounter" <> parens (text "-" <+> parens vdoc <> comma <+> doubleQuotes (text nm))
+        else error ("Reference to non-existent counter " ++ nm)
+compileCounterUpdate (Set nm v) = do
+    ids <- ask
+    vdoc <- compileValue v
+    if nm `elem` (counters ids) 
+        then return $ text "for player in idList1: player.setCounter" <> parens (vdoc <> comma <+> doubleQuotes (text nm))
+        else error ("Reference to non-existent counter " ++ nm)
+
+-- | Compiles an AffiliationUpdate into python code for updating the affiliations. 
 compileAffUpdate :: AffiliationUpdate -> Reader IdNames Doc
 compileAffUpdate Elimination = return $ text "game.eliminate(idList1)"
 compileAffUpdate (Add nm) = return $ text "for player in idList1: player.addAff" <> parens (doubleQuotes (text nm))
@@ -125,12 +147,14 @@ compileAffUpdate (Merge nms newnm) = do
     where mergeName Nothing = doubleQuotes $ text "merged"
           mergeName (Just nm) = doubleQuotes $ text nm
 
+-- | Compiles a list of Names into python code for a list of strings.
 compileNameList :: [Name] -> Doc
 compileNameList nms = brackets $ compileNames nms
     where compileNames [] = empty
           compileNames [x] = doubleQuotes $ text x
           compileNames (x:xs) = doubleQuotes (text x) <> comma <+> compileNames xs
 
+-- | Compiles an Action into the corresponding Competition or Decision python code. The list of Docs is for any function definitions that are required.
 compileAction :: Action -> Reader IdNames (Doc, [Doc])
 compileAction (Comp c) = compileComp c
 compileAction (Dec d) = compileDec d

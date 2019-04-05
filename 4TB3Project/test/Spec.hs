@@ -705,3 +705,10 @@ main = hspec $ do
                 runReader (compileAffUpdate (Merge ["Test", "Great"] Nothing)) ids `shouldBe` text "game.merge([\"Test\", \"Great\"], \"merged\", idList1)"
             it "compiles an affiliation Merge with a merge name" $
                 runReader (compileAffUpdate (Merge ["Test", "Great"] (Just "Mediocre"))) ids `shouldBe` text "game.merge([\"Test\", \"Great\"], \"Mediocre\", idList1)"
+        describe "compileCounterUpdate" $ do
+            it "compiles an Increase counter update" $
+                runReader (compileCounterUpdate (Increase "votes" (Num 3))) ids `shouldBe` text "for player in idList1: player.updateCounter(3, \"votes\")"
+            it "compiles a Decrease counter update" $
+                runReader (compileCounterUpdate (Decrease "votes" (Num 3))) ids `shouldBe` text "for player in idList1: player.updateCounter(- (3), \"votes\")"
+            it "compiles a Set counter update" $
+                runReader (compileCounterUpdate (Set "votes" (Num 0))) ids `shouldBe` text "for player in idList1: player.setCounter(0, \"votes\")"
