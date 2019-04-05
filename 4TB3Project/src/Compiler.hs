@@ -8,7 +8,9 @@ module Compiler (
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
     compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
-    compileAffUpdate, compileCounterUpdate, compileProgression, compilePhaseList
+    compileAffUpdate, compileCounterUpdate, compileProgression, 
+    compilePhaseList, countCompsInPhaseList, countVotesInPhaseList, 
+    countAllocsInPhaseList
 ) where
 
 import AST
@@ -365,3 +367,24 @@ compileVoteRef (VRef num) = text "voteResults" <> brackets (integer (num-1))
 -- | Compiles an AllocRef into python code for accessing the allocateResults array at the referenced index. Note that indexing starts at 1 for the game language.
 compileAllocRef :: AllocRef -> Doc
 compileAllocRef (ARef num) = text "allocateResults" <> brackets (integer (num-1))
+
+-- * Helper functions
+
+-- | Returns the number of Competitions in a given phase list
+countCompsInPhaseList :: [Phase] -> Integer
+countCompsInPhaseList [] = 0
+countCompsInPhaseList ((Act (Comp _)):pl) = 1 + countCompsInPhaseList pl
+countCompsInPhaseList (p:pl) = 0 + countCompsInPhaseList pl
+
+-- | Returns the number of Votes and DirectedVotes in a given phase list
+countVotesInPhaseList :: [Phase] -> Integer
+countVotesInPhaseList [] = 0
+countVotesInPhaseList ((Act (Dec (Vote _ _ _))):pl) = 1 + countVotesInPhaseList pl
+countVotesInPhaseList ((Act (Dec (DirectedVote _ _ _))):pl) = 1 + countVotesInPhaseList pl
+countVotesInPhaseList (p:pl) = 0 + countVotesInPhaseList pl
+
+-- | Returns the number of Allocations in a given phase list
+countAllocsInPhaseList :: [Phase] -> Integer
+countAllocsInPhaseList [] = 0
+countAllocsInPhaseList ((Act (Dec (Allocation _ _))):pl) = 1 + countAllocsInPhaseList pl
+countAllocsInPhaseList (p:pl) = 0 + countAllocsInPhaseList pl

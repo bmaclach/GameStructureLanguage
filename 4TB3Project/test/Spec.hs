@@ -722,3 +722,12 @@ main = hspec $ do
                 runReader (compilePhaseList []) ids `shouldBe` (empty, [])
             it "compiles a non-empty phase list" $ do
                 runReader (compilePhaseList [Act (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [] []))]) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)\nincludeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)", [])
+        describe "countCompsInPhaseList" $ do
+            it "counts the number of competitions in a phase list" $ do
+                countCompsInPhaseList [Act (Comp (Scored Team (IdList [] []))), Prog (AU Elimination (IdList [] [])), Act (Dec (Vote (IdList [] []) (IdList [] []) False)), Act (Dec (Allocation "votes" (IdList [] []))), Act (Comp (Placed Individual (IdList [] []) False True)), Act (Dec (Nomination 2 (IdList [] []) (IdList [] []) True)), Act (Dec (DirectedVote (IdList [] []) (IdList [] []) True))] `shouldBe` 2
+        describe "countVotesInPhaseList" $ do
+            it "counts the number of votes in a phase list" $
+                countVotesInPhaseList [Act (Comp (Scored Team (IdList [] []))), Prog (AU Elimination (IdList [] [])), Act (Dec (Vote (IdList [] []) (IdList [] []) False)), Act (Dec (Allocation "votes" (IdList [] []))), Act (Comp (Placed Individual (IdList [] []) False True)), Act (Dec (Nomination 2 (IdList [] []) (IdList [] []) True)), Act (Dec (DirectedVote (IdList [] []) (IdList [] []) True))] `shouldBe` 2
+        describe "countAllocsInPhaseList" $ do
+            it "counts the number of allocations in a phase list" $
+                countAllocsInPhaseList [Act (Comp (Scored Team (IdList [] []))), Prog (AU Elimination (IdList [] [])), Act (Dec (Vote (IdList [] []) (IdList [] []) False)), Act (Dec (Allocation "votes" (IdList [] []))), Act (Comp (Placed Individual (IdList [] []) False True)), Act (Dec (Nomination 2 (IdList [] []) (IdList [] []) True)), Act (Dec (DirectedVote (IdList [] []) (IdList [] []) True))] `shouldBe` 1
