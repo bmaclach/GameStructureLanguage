@@ -10,7 +10,7 @@ module Compiler (
     compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
     compileAffUpdate, compileCounterUpdate, compileProgression, 
     compilePhaseList, countCompsInPhaseList, countVotesInPhaseList, 
-    countAllocsInPhaseList
+    countAllocsInPhaseList, compileRoundList
 ) where
 
 import AST
@@ -24,11 +24,19 @@ import Prelude hiding ((<>))
 import Data.List (intersperse)
 import Control.Monad.Reader
 
+-- | The import of gamelib, which is required in every game
 pyImports :: Doc
 pyImports = text "from gamelib import *"
 
+-- | The initialization of a Game object, which is required for every game
 initGame :: Doc
 initGame = text "game" <+> equals <+> text "Game" <> parens empty
+
+-- | The iteration through the round list, which is required for every game
+runRounds :: Doc
+runRounds = vcat [text "for round in roundList:",
+                  nest 4 (text "game.resetResults()"),
+                  nest 4 (text "round()")]
 
 -- * Compiling Players
 
@@ -100,6 +108,21 @@ data IdNames = IdNames {
     affs :: [Name],
     counters :: [Name]
 }
+
+-- | Compiles a list of rounds into a roundList in python and function definitions for each different type of round.
+compileRoundList :: [Round] -> Reader IdNames (Doc, [Doc])
+compileRoundList rl = do
+    rldoc <- concatRounds rl 1
+    return $ (text "roundList =" <+> fst rldoc, snd rldoc)
+    where concatRounds :: [Round] -> Integer -> Reader IdNames (Doc, [Doc])
+          concatRounds [] _ = return $ (empty, [])
+          concatRounds [R pl n ml] num = do
+            pldoc <- compilePhaseList pl
+            return $ (brackets (text "roundType" <> integer num) <+> text "*" <+> integer n, [vcat [text "def roundType" <> integer num <> parens empty <> colon, nest 4 (fst pldoc)]] ++ snd pldoc)
+          concatRounds ((R pl n ml):roundl) num = do
+            pldoc <- compilePhaseList pl
+            rldoc <- concatRounds roundl (num+1)
+            return $ (brackets (text "roundType" <> integer num) <+> text "*" <+> integer n <+> text "+" <+> fst rldoc, [vcat [text "def roundType" <> integer num <> parens empty <> colon, nest 4 (fst pldoc)]] ++ snd rldoc ++ snd pldoc)
 
 -- | Compiles a Phase into python code for the action or progression. The list of Docs is for any function definitions that are required.
 compilePhaseList :: [Phase] -> Reader IdNames (Doc, [Doc])
@@ -374,6 +397,10 @@ compileVoteRef (VRef num) = text "voteResults" <> brackets (integer (num-1))
 -- | Compiles an AllocRef into python code for accessing the allocateResults array at the referenced index. Note that indexing starts at 1 for the game language.
 compileAllocRef :: AllocRef -> Doc
 compileAllocRef (ARef num) = text "allocateResults" <> brackets (integer (num-1))
+
+-- * Compiling Win Conditions
+
+compileWinCondition
 
 -- * Helper functions
 

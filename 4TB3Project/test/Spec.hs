@@ -733,3 +733,10 @@ main = hspec $ do
         describe "countAllocsInPhaseList" $ do
             it "counts the number of allocations in a phase list" $
                 countAllocsInPhaseList [Act (Comp (Scored Team (IdList [] []))), Prog (AU Elimination (IdList [] [])), Act (Dec (Vote (IdList [] []) (IdList [] []) False)), Act (Dec (Allocation "votes" (IdList [] []))), Act (Comp (Placed Individual (IdList [] []) False True)), Act (Dec (Nomination 2 (IdList [] []) (IdList [] []) True)), Act (Dec (DirectedVote (IdList [] []) (IdList [] []) True))] `shouldBe` 1
+        describe "compileRoundList" $ do
+            it "compiles an empty roundList" $
+                runReader (compileRoundList []) ids `shouldBe` (text "roundList =", [])
+            it "compiles a single round" $ 
+                runReader (compileRoundList [R [Act (Comp (Scored Individual (IdList [] [])))] 3 []]) ids `shouldBe` (text "roundList = [roundType1] * 3", [text "def roundType1():\n    includeList1 = []\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)"])
+            it "compiles multiple rounds" $
+                runReader (compileRoundList [R [Act (Comp (Scored Individual (IdList [] [])))] 3 [], R [Prog (AU Elimination (IdList [] []))] 5 []]) ids `shouldBe` (text "roundList = [roundType1] * 3 + [roundType2] * 5", [text "def roundType1():\n    includeList1 = []\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)", text "def roundType2():\n    includeList1 = []\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.eliminate(idList1)"])
