@@ -7,7 +7,8 @@ module Compiler (
     compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
-    compileComp, compileDec, compileAction, compileTiebreaker
+    compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
+    compileAffUpdate
 ) where
 
 import AST
@@ -15,7 +16,7 @@ import PreCompiler (getAffsFromAttList)
 
 import Text.PrettyPrint.HughesPJ (Doc, (<+>), (<>), ($$), braces, brackets, 
     colon, comma, doubleQuotes, empty, equals, hcat, integer, nest, parens,
-    space, text, vcat)
+    semi, space, text, vcat)
 
 import Prelude hiding ((<>))
 import Data.List (intersperse)
@@ -97,6 +98,38 @@ data IdNames = IdNames {
     affs :: [Name],
     counters :: [Name]
 }
+
+compileAffUpdate :: AffiliationUpdate -> Reader IdNames Doc
+compileAffUpdate Elimination = return $ text "game.eliminate(idList1)"
+compileAffUpdate (Add nm) = return $ text "for player in idList1: player.addAff" <> parens (doubleQuotes (text nm))
+compileAffUpdate (Remove nm) = do
+    ids <- ask
+    if nm `elem` (affs ids)
+        then return $ text "for player in idList1: player.removeAff" <> parens (doubleQuotes (text nm))
+        else error ("Reference to non-existent affiliation" ++ nm)
+compileAffUpdate (Change old new) = do
+    ids <- ask
+    if old `elem` (affs ids)
+        then return $ text "for player in idList1: player.removeAff" <> parens (doubleQuotes (text old)) <> semi <+> text "player.addAff" <> parens (doubleQuotes (text new))
+        else error ("Reference to non-existent affiliation " ++ old)
+compileAffUpdate (Swap nms newnms np) = do
+    ids <- ask
+    if and (map (flip elem (affs ids)) nms)
+        then return $ text "game.swap" <> parens (compileNameList nms <> comma <+> compileNameList newnms <> comma <+> text "idList1," <+> text (show np))
+        else error ("Reference to non-existent affiliation in " ++ show nms)
+compileAffUpdate (Merge nms newnm) = do
+    ids <- ask
+    if and (map (flip elem (affs ids)) nms)
+        then return $ text "game.merge" <> parens (compileNameList nms <> comma <+> mergeName newnm <> comma <+> text "idList1") 
+        else error ("Reference to non-existent affiliation in " ++ show nms)
+    where mergeName Nothing = doubleQuotes $ text "merged"
+          mergeName (Just nm) = doubleQuotes $ text nm
+
+compileNameList :: [Name] -> Doc
+compileNameList nms = brackets $ compileNames nms
+    where compileNames [] = empty
+          compileNames [x] = doubleQuotes $ text x
+          compileNames (x:xs) = doubleQuotes (text x) <> comma <+> compileNames xs
 
 compileAction :: Action -> Reader IdNames (Doc, [Doc])
 compileAction (Comp c) = compileComp c

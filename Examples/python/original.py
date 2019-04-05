@@ -16,7 +16,7 @@ def roundType1():
     game.directedVote(directedVoters, game.playerList, True)
     for player in game.playerList:
         player.updateCounter(game.voteResults[0][player], "position")
-    game.eliminate(getMinOrMax(game.playerList, "position", False, lowVoteTiebreaker))
+    game.eliminate([getMinOrMax(game.playerList, "position", False, lowVoteTiebreaker)])
 
 game = Game()
 

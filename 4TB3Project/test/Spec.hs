@@ -683,3 +683,25 @@ main = hspec $ do
                 runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [N "Brooks"])))) Nominated) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    allocate(idList1, \"votes\")\n    ident = [x for x in game.playerList if \"nominated\" in x.affiliations]\n    del game.allocateResults[-1]\n    return ident[0]"])
             it "compiles a Tiebreaker with an action into a function name and definition and deletes result if action was a Competition" $
                 runReader (compileTiebreaker (Tiebreak "rocks" (Just (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] [])))) Nominated) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)\n    ident = [x for x in game.playerList if \"nominated\" in x.affiliations]\n    del game.compResults[-1]\n    return ident[0]"])
+        describe "compileNameList" $ do
+            it "compiles an empty list of names" $
+                compileNameList [] `shouldBe` text "[]"
+            it "compiles a singleton list of names" $
+                compileNameList ["Test"] `shouldBe` text "[\"Test\"]"
+            it "compiles a multi-element list of names" $
+                compileNameList ["Test", "Great"] `shouldBe` text "[\"Test\", \"Great\"]"
+        describe "compileAffUpdate" $ do
+            it "compiles an Elimination" $
+                runReader (compileAffUpdate Elimination) ids `shouldBe` text "game.eliminate(idList1)"
+            it "compiles an affiliation Add" $
+                runReader (compileAffUpdate (Add "Mediocre")) ids `shouldBe` text "for player in idList1: player.addAff(\"Mediocre\")"
+            it "compiles an affiliation Remove" $
+                runReader (compileAffUpdate (Remove "Test")) ids `shouldBe` text "for player in idList1: player.removeAff(\"Test\")"
+            it "compiles an affiliation Change" $
+                runReader (compileAffUpdate (Change "Test" "Mediocre")) ids `shouldBe` text "for player in idList1: player.removeAff(\"Test\"); player.addAff(\"Mediocre\")"
+            it "compiles an affiliation Swap" $
+                runReader (compileAffUpdate (Swap ["Test", "Great"] ["Mediocre"] False)) ids `shouldBe` text "game.swap([\"Test\", \"Great\"], [\"Mediocre\"], idList1, False)"
+            it "compiles an affiliation Merge with no merge name" $
+                runReader (compileAffUpdate (Merge ["Test", "Great"] Nothing)) ids `shouldBe` text "game.merge([\"Test\", \"Great\"], \"merged\", idList1)"
+            it "compiles an affiliation Merge with a merge name" $
+                runReader (compileAffUpdate (Merge ["Test", "Great"] (Just "Mediocre"))) ids `shouldBe` text "game.merge([\"Test\", \"Great\"], \"Mediocre\", idList1)"

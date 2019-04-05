@@ -219,10 +219,35 @@ class Game:
             voteDict.update({player: n})
         self.voteResults.append(voteDict)
 
-    def eliminate(self, player):
-        self.eliminated.append(player)
-        self.playerList.remove(player)
-        print(player.name + " has been eliminated!")
+    def swap(self, teams, newteams, players, numPreserve):
+        for team in newteams:
+            if team not in self.teamList:
+                self.teamList.append(team)
+        teamSizeDict = {}
+        for team in teams:
+            teamSize = 0
+            for player in [x for x in players if team in x.affiliations]:
+                player.removeAff(team)
+                teamSize = teamSize + 1
+            teamSizeDict.update({team: teamSize})
+        if numPreserve:
+            randomlyDivideTeamsOfSize(teamSizeDict, players)
+        else:
+            randomlyDivideTeams(teams + newteams, players)
+
+    def merge(self, teams, newteam, players):
+        if newteam not in self.teamList:
+            self.teamList.append(newteam)
+        for team in teams:
+            for player in [x for x in players if team in x.affiliations]:
+                player.removeAff(team)
+                player.addAff(newteam)
+
+    def eliminate(self, players):
+        for player in players:
+            self.eliminated.append(player)
+            self.playerList.remove(player)
+            print(player.name + " has been eliminated!")
 
     def juryVote(self, numJurors):
         self.vote(self.eliminated[(len(self.eliminated)-numJurors):], self.playerList)
@@ -354,25 +379,6 @@ def getMinOrMax(players, metric, minOrMax, tiebreaker=defaultTiebreaker):
         return tiebreaker(tied)
     else:
         return sortedPlayers[0]
-
-def swap(teams, newteams, players, numPreserve):
-    teamSizeDict = {}
-    for team in teams:
-        teamSize = 0
-        for player in [x for x in players if team in x.affiliations]:
-            player.removeAff(team)
-            teamSize = teamSize + 1
-        teamSizeDict.update({team: teamSize})
-    if numPreserve:
-        randomlyDivideTeamsOfSize(teamSizeDict, players)
-    else:
-        randomlyDivideTeams(teams + newteams, players)
-
-def merge(teams, newteam, players):
-    for team in teams:
-        for player in [x for x in players if team in x.affiliations]:
-            player.removeAff(team)
-            player.addAff(newteam)
 
 def randomDraw(pool):
     draw = random.randint(0, len(pool)-1)

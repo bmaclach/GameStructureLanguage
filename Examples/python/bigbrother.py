@@ -24,7 +24,7 @@ def roundType1():
         saved.removeAff("nominated")
         del game.voteResults[-1] # vote in branch should not be included in all votes
     game.vote([x for x in game.playerList if "HOH" not in x.affiliations and "nominated" not in x.affiliations], [x for x in game.playerList if "nominated" in x.affiliations])
-    game.eliminate(getVoteMinOrMax(game.voteResults[-1], True, hohTiebreaker))
+    game.eliminate([getVoteMinOrMax(game.voteResults[-1], True, hohTiebreaker)])
     for player in [x for x in game.playerList if "nominated" in x.affiliations]:
         player.removeAff("nominated")
 
@@ -43,14 +43,14 @@ def roundType2():
         saved.removeAff("nominated")
         del game.voteResults[-1] # vote in branch should not be included in all votes
     game.vote([x for x in game.playerList if "HOH" not in x.affiliations and "nominated" not in x.affiliations], [x for x in game.playerList if "nominated" in x.affiliations])
-    game.eliminate(getVoteMinOrMax(game.voteResults[-1], True, hohTiebreaker))
+    game.eliminate([getVoteMinOrMax(game.voteResults[-1], True, hohTiebreaker)])
     for player in [x for x in game.playerList if "nominated" in x.affiliations]:
         player.removeAff("nominated")
 
 def roundType3():
     game.getCompResults(game.playerList, True, False)
     game.vote([game.compResults[0]["winner"]], game.playerList)
-    game.eliminate(getVoteMinOrMax(game.voteResults[0], True))
+    game.eliminate([getVoteMinOrMax(game.voteResults[0], True)])
 
 game = Game()
 
