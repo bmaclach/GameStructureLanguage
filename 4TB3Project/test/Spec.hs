@@ -6,7 +6,7 @@ import PreCompiler
 import Compiler
 
 import Prelude hiding (round)
-import Text.PrettyPrint.HughesPJ (empty, text)
+import Text.PrettyPrint.HughesPJ (empty, nest, text)
 import Control.Monad.Reader (runReader)
 
 ids :: IdNames
@@ -740,3 +740,27 @@ main = hspec $ do
                 runReader (compileRoundList [R [Act (Comp (Scored Individual (IdList [] [])))] 3 []]) ids `shouldBe` (text "roundList = [roundType1] * 3", [text "def roundType1():\n    includeList1 = []\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)"])
             it "compiles multiple rounds" $
                 runReader (compileRoundList [R [Act (Comp (Scored Individual (IdList [] [])))] 3 [], R [Prog (AU Elimination (IdList [] []))] 5 []]) ids `shouldBe` (text "roundList = [roundType1] * 3 + [roundType2] * 5", [text "def roundType1():\n    includeList1 = []\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)", text "def roundType2():\n    includeList1 = []\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.eliminate(idList1)"])
+        describe "compileGoalList" $ do
+            it "compiles an empty goal list" $
+                runReader (compileGoalList []) ids `shouldBe` empty
+            it "compiles a singleton goal list" $
+                runReader (compileGoalList [Gl 30 "votes"]) ids `shouldBe` text "player.checkWinCondition(\"votes\", 30)"
+            it "compiles a multi-element goal list" $
+                runReader (compileGoalList [Gl 30 "votes", Gl 100 "points"]) ids `shouldBe` text "player.checkWinCondition(\"votes\", 30) and player.checkWinCondition(\"points\", 100)"
+        describe "compileWinCondition" $ do
+            it "compiles a Survive Win Condition" $
+                runReader (compileWinCondition Survive) ids `shouldBe` (text "winners = \"\"\nif len(game.playerList) == 1:\n    winners = game.playerList[0].name\nelse:\n    for player in game.playerList[1:]:\n        winners += player.name + \", \"\n    winners += \"and \" + game.playerList[0].name\nprint(winners + \" won!\")", [])
+            it "compiles a Jury Win Condition" $
+                runReader (compileWinCondition (Jury 7)) ids `shouldBe` (text "game.juryVote(7)\nwinner = getVoteMinOrMax(game.voteResults[-1], True)\nprint(winner.name + \" won!\")", [])
+            it "compiles a FinalComp Team Win Condition" $
+                runReader (compileWinCondition (FinalComp Team)) ids `shouldBe` (text "game.getTeamCompResults(game.teamList, True, False)\nwinner = compResults[-1][\"winner\"]\nprint(winner + \" won!\")", [])
+            it "compiles a FinalComp Individual Win Condition" $
+                runReader (compileWinCondition (FinalComp Individual)) ids `shouldBe` (text "game.getCompResults(game.playerList, True, False)\nwinner = compResults[-1][\"winner\"]\nprint(winner.name + \" won!\")", [])
+            it "compiles a Reach Individual Win Condition" $
+                runReader (compileWinCondition (Reach [Gl 4 "points"] Individual)) ids `shouldBe` (text "    winners = []\n    for player in game.playerList:\n        if player.checkWinCondition(\"points\", 4):\n            winners += player.name\n    if len(winners) > 0:\n        winnerString = \"\"\n        if len(winners) == 1:\n            winnerString = winners[0]\n        else:\n            for winner in winners[1:]:\n                winnerString += winner + \", \"\n            winnerString += \"and \" + winners[0]\n        print(winnerString + \" won!\")", [])
+            it "compiles a Reach Team Win Condition" $
+                runReader (compileWinCondition (Reach [Gl 4 "points"] Team)) ids `shouldBe` (text "    winners = []\n    for player in game.playerList:\n        if player.checkWinCondition(\"points\", 4):\n            winners += player\n    if len(winners) > 0:\n        winTeams = list(dict.fromkeys([x for x in game.teamList for y in winners if x in y.affiliations]))\n        winnerString = \"\"\n        if len(winTeams) == 1:\n            winnerString = winTeams[0]\n        else:\n            for winner in winTeams[1:]:\n                winnerString += winner + \", \"\n            winnerString += \"and \" + winTeams[0]\n        print(winnerString + \" won!\")", [])
+            it "compiles an Ids Individual Win Condition" $
+                runReader (compileWinCondition (Ids (IdList [] []) Individual)) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nwinners = \"\"\nif len(idList1) == 0: print(\"No winners!\")\nelif len(idList1) == 1:\n    winners = idList1[0].name\nelse:\n    for winner in idList1[1:]:\n        winners += winner.name + \", \"\n    winners += \"and \" + idList1[0].name\nprint(winners + \" won!\")", [])
+            it "compiles an Ids Team Win Condition" $
+                runReader (compileWinCondition (Ids (IdList [] []) Team)) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nwinTeams = list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations]))\nwinners = \"\"\nif len(winTeams) == 0: print(\"No winners!\")\nelif len(winTeams) == 1:\n    winners = winTeams[0]\nelse:\n    for winner in winTeams[1:]:\n        winners += winner + \", \"\n    winners += \"and \" + winTeams[0]\nprint(winners + \" won!\")", [])

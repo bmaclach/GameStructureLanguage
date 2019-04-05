@@ -252,12 +252,6 @@ class Game:
     def juryVote(self, numJurors):
         self.vote(self.eliminated[(len(self.eliminated)-numJurors):], self.playerList)
 
-    def checkWinCondition(self, counter, goal):
-        for player in self.playerList:
-            if player.counters[counter] >= goal:
-                return True
-        return False
-
 class Player:
 
     def __init__(self, name, affiliations=[], counters=[]):
@@ -310,6 +304,11 @@ class Player:
                     print("Attempt to set " + counter + " to value above the maximum. Setting to the maximum, " + str(self.maxs[counter]) + "instead.")
         else:
             self.counters[counter] = val
+    
+    def checkWinCondition(self, counter, goal):
+        if self.counters[counter] >= goal:
+                return True
+        return False
         
 
 def defaultTiebreaker(tied):

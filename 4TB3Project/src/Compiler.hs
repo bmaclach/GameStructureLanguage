@@ -10,7 +10,8 @@ module Compiler (
     compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
     compileAffUpdate, compileCounterUpdate, compileProgression, 
     compilePhaseList, countCompsInPhaseList, countVotesInPhaseList, 
-    countAllocsInPhaseList, compileRoundList
+    countAllocsInPhaseList, compileRoundList, compileGoalList, 
+    compileWinCondition
 ) where
 
 import AST
@@ -400,8 +401,63 @@ compileAllocRef (ARef num) = text "allocateResults" <> brackets (integer (num-1)
 
 -- * Compiling Win Conditions
 
-compileWinCondition
+compileWinCondition :: WinCondition -> Reader IdNames (Doc, [Doc])
+compileWinCondition Survive = return $ (vcat [text "winners =" <+> doubleQuotes empty,
+    text "if len(game.playerList) == 1:",
+    nest 4 (text "winners = game.playerList[0].name"),
+    text "else:",
+    nest 4 (text "for player in game.playerList[1:]:"),
+    nest 8 (text "winners += player.name +" <+> doubleQuotes (comma <> space)),
+    nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ game.playerList[0].name"),
+    text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], [])
+compileWinCondition (Jury num) = return $ (vcat [text "game.juryVote" <> parens (integer num), text "winner = getVoteMinOrMax(game.voteResults[-1], True)", text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))], [])
+compileWinCondition (FinalComp Team) = return $ (vcat [text "game.getTeamCompResults(game.teamList, True, False)", text "winner = compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner +" <+> doubleQuotes (text " won!"))], [])
+compileWinCondition (FinalComp Individual) = return $ (vcat [text "game.getCompResults(game.playerList, True, False)", text "winner = compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))], [])
+compileWinCondition (Reach gl Individual) = do
+    gldoc <- compileGoalList gl
+    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners += player.name"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winners) == 1:"), nest 12 (text "winnerString = winners[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winners[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winners[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!")))], [])
+compileWinCondition (Reach gl Team) = do
+    gldoc <- compileGoalList gl
+    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners += player"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winTeams = list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in winners if x in y.affiliations")))), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winTeams) == 1:"), nest 12 (text "winnerString = winTeams[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winTeams[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!")))], [])
+compileWinCondition (Ids il Individual) = do
+    ildoc <- compileIdentifierList il 1
+    return $ (vcat [fst ildoc, text "winners =" <+> doubleQuotes empty,
+        text "if len(idList1) == 0: print(\"No winners!\")",
+        text "elif len(idList1) == 1:",
+        nest 4 (text "winners = idList1[0].name"),
+        text "else:",
+        nest 4 (text "for winner in idList1[1:]:"),
+        nest 8 (text "winners += winner.name +" <+> doubleQuotes (comma <> space)),
+        nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ idList1[0].name"),
+        text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], snd ildoc)
+compileWinCondition (Ids il Team) = do
+    ildoc <- compileIdentifierList il 1
+    return $ (vcat [fst ildoc, 
+        text "winTeams = list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))),
+        text "winners =" <+> doubleQuotes empty,
+        text "if len(winTeams) == 0: print(\"No winners!\")",
+        text "elif len(winTeams) == 1:",
+        nest 4 (text "winners = winTeams[0]"),
+        text "else:",
+        nest 4 (text "for winner in winTeams[1:]:"),
+        nest 8 (text "winners += winner +" <+> doubleQuotes (comma <> space)),
+        nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"),
+        text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], snd ildoc)
 
+compileGoalList :: [Goal] -> Reader IdNames Doc
+compileGoalList [] = return $ empty
+compileGoalList [Gl num nm] = do
+    ids <- ask
+    if nm `elem` (counters ids)
+        then return $ text "player.checkWinCondition" <> parens (doubleQuotes (text nm) <> comma <+> integer num)
+        else error ("Reference to non-existent counter " ++ nm)
+compileGoalList ((Gl num nm):gl) = do
+    ids <- ask
+    gldoc <- compileGoalList gl
+    if nm `elem` (counters ids)
+        then return $ text "player.checkWinCondition" <> parens (doubleQuotes (text nm) <> comma <+> integer num) <+> text "and" <+> gldoc
+        else error ("Reference to non-existent counter " ++ nm)
+ 
 -- * Helper functions
 
 -- | Returns the number of Competitions in a given phase list

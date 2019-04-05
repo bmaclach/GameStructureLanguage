@@ -14,6 +14,7 @@ roundList = [roundType1] * 7
 for round in roundList:
     game.resetResults()
     round()
-    if game.checkWinCondition("sets", 4):
-        print(game.compResults[0]["winner"].name + " won!") 
-        break
+    for player in game.playerList:
+        if player.checkWinCondition("sets", 4):
+            print(game.compResults[0]["winner"].name + " won!") 
+            break
