@@ -11,18 +11,19 @@ module Compiler (
     compileAffUpdate, compileCounterUpdate, compileProgression, 
     compilePhaseList, countCompsInPhaseList, countVotesInPhaseList, 
     countAllocsInPhaseList, compileRoundList, compileGoalList, 
-    compileWinCondition
+    compileWinCondition, getCountersFromAttList, getCountersFromPlayerList, 
+    getAllCounters, compileGame
 ) where
 
 import AST
-import PreCompiler (getAffsFromAttList)
+import PreCompiler (getAffsFromAttList, getAllAffiliations, getAllNames)
 
 import Text.PrettyPrint.HughesPJ (Doc, (<+>), (<>), ($$), braces, brackets, 
     colon, comma, doubleQuotes, empty, equals, hcat, integer, nest, parens,
     semi, space, text, vcat)
 
 import Prelude hiding ((<>))
-import Data.List (intersperse)
+import Data.List (intersperse, nub)
 import Control.Monad.Reader
 
 -- | The import of gamelib, which is required in every game
@@ -38,6 +39,22 @@ runRounds :: Doc
 runRounds = vcat [text "for round in roundList:",
                   nest 4 (text "game.resetResults()"),
                   nest 4 (text "round()")]
+
+-- | Compiles a Game into python code that will run the game
+compileGame :: Game -> Doc
+compileGame g@(G pi rl wc) = vcat (intersperse (text "") [
+    pyImports,
+    vcat (intersperse (text "") (nub $ snd rldoc ++ snd wcdoc)),
+    initGame,
+    pidoc,
+    fst rldoc,
+    runRounds,
+    fst wcdoc])
+    where rldoc = runReader (compileRoundList rl) ids
+          pidoc = compilePlayerInfo pi
+          wcdoc = runReader (compileWinCondition wc) ids
+          ids = IdNames pnames (getAllAffiliations g pnames) (getAllCounters g)
+          pnames = getAllNames g
 
 -- * Compiling Players
 
@@ -401,6 +418,7 @@ compileAllocRef (ARef num) = text "allocateResults" <> brackets (integer (num-1)
 
 -- * Compiling Win Conditions
 
+-- | Compiles a win condition into python code that will find and print out the winner(s). The returned list of Docs is for any function definitions that are required
 compileWinCondition :: WinCondition -> Reader IdNames (Doc, [Doc])
 compileWinCondition Survive = return $ (vcat [text "winners =" <+> doubleQuotes empty,
     text "if len(game.playerList) == 1:",
@@ -444,6 +462,7 @@ compileWinCondition (Ids il Team) = do
         nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"),
         text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], snd ildoc)
 
+-- | Compiles a list of goals into a predicate in python that checks whether a player has met those goals.
 compileGoalList :: [Goal] -> Reader IdNames Doc
 compileGoalList [] = return $ empty
 compileGoalList [Gl num nm] = do
@@ -478,3 +497,18 @@ countAllocsInPhaseList :: [Phase] -> Integer
 countAllocsInPhaseList [] = 0
 countAllocsInPhaseList ((Act (Dec (Allocation _ _))):pl) = 1 + countAllocsInPhaseList pl
 countAllocsInPhaseList (p:pl) = 0 + countAllocsInPhaseList pl
+
+-- | Extracts all counter names from a Game
+getAllCounters :: Game -> [Name]
+getAllCounters (G (PI pl _ _) _ _) = getCountersFromPlayerList pl
+
+-- | Extract all counter names from a list of Players
+getCountersFromPlayerList :: [Player] -> [Name]
+getCountersFromPlayerList [] = []
+getCountersFromPlayerList ((P _ al):pl) = getCountersFromAttList al ++ getCountersFromPlayerList pl
+
+-- | Extract all counter names from a list of Attributes
+getCountersFromAttList :: [Attribute] -> [Name]
+getCountersFromAttList [] = []
+getCountersFromAttList ((Affiliation _):al) = getCountersFromAttList al
+getCountersFromAttList ((Counter nm _ _ _):al) = nm : getCountersFromAttList al
