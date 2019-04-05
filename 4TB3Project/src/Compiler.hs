@@ -189,27 +189,34 @@ compileDec :: Decision -> Reader IdNames (Doc, [Doc])
 compileDec (Vote voterl voteel sv) = do
     voterList <- compileIdentifierList voterl 1
     voteeList <- compileIdentifierList voteel 1
-    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "vote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
+    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "game.vote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
 compileDec (Nomination n nommers pool sv) = do
     nommerList <- compileIdentifierList nommers 1
     poolList <- compileIdentifierList pool 1
-    return (vcat [fst nommerList, text "nommerList = idList1", fst poolList, text "poolList = idList1", text "nominate" <> parens (text "nommerList," <+> integer n <> comma <+> text "poolList," <+> text (show sv))], snd nommerList ++ snd poolList)
+    return (vcat [fst nommerList, text "nommerList = idList1", fst poolList, text "poolList = idList1", text "game.nominate" <> parens (text "nommerList," <+> integer n <> comma <+> text "poolList," <+> text (show sv))], snd nommerList ++ snd poolList)
 compileDec (Allocation nm il) = do
     ids <- ask
     ildoc <- compileIdentifierList il 1
     if nm `elem` (counters ids)
-        then return (vcat [fst ildoc, text "allocate" <> parens (text "idList1," <+> doubleQuotes (text nm))], snd ildoc)
+        then return (vcat [fst ildoc, text "game.allocate" <> parens (text "idList1," <+> doubleQuotes (text nm))], snd ildoc)
         else error ("Reference to non-existent counter " ++ nm)
 compileDec (DirectedVote voterl voteel sv) = do
     voterList <- compileIdentifierList voterl 1
     voteeList <- compileIdentifierList voteel 1
-    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "directedVote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
--- compileDec (Uses id yespl nopl) = do
---     iddoc <- compileIdentifier id
---     yesdoc <- compilePhaseList yespl
---     nodoc <- compilePhaseList nopl
---     return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon,nest 4 (fst yespl), text "else:", nest 4 (fst nopl)], snd iddoc ++ snd yesdoc ++ snd nodoc) 
-    -- need to delete results if they happen
+    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "game.directedVote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
+compileDec (Uses id yespl nopl) = do
+    iddoc <- compileIdentifier id 1
+    yesdoc <- compilePhaseList yespl
+    nodoc <- compilePhaseList nopl
+    if nopl == []
+        then return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon, nest 4 (fst yesdoc), nest 4 (delComps (countCompsInPhaseList yespl)), nest 4 (delVotes (countVotesInPhaseList yespl)), nest 4 (delAllocs (countAllocsInPhaseList yespl))], snd iddoc ++ snd yesdoc)
+        else return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon,nest 4 (fst yesdoc), nest 4 (delComps (countCompsInPhaseList yespl)), nest 4 (delVotes (countVotesInPhaseList yespl)), nest 4 (delAllocs (countAllocsInPhaseList yespl)), text "else:", nest 4 (fst nodoc), nest 4 (delComps (countCompsInPhaseList nopl)), nest 4 (delVotes (countVotesInPhaseList nopl)), nest 4 (delAllocs (countAllocsInPhaseList nopl))], snd iddoc ++ snd yesdoc ++ snd nodoc) 
+        where delComps 0 = empty
+              delComps n = text "game.compResults = game.compResults" <> brackets (text "0:len(game.compResults)-" <> integer n)
+              delVotes 0 = empty
+              delVotes n = text "game.voteResults = game.voteResults" <> brackets (text "0:len(game.voteResults)-" <> integer n)
+              delAllocs 0 = empty
+              delAllocs n = text "game.allocateResults = game.allocateResults" <> brackets (text "0:len(game.allocateResults)-" <> integer n)
 
 -- | Compiles a Competition into a call to a python function for getting the competition results. The list of Docs is for any function definitions that are required.
 compileComp :: Competition -> Reader IdNames (Doc, [Doc])
