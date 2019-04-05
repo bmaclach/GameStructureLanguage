@@ -717,3 +717,8 @@ main = hspec $ do
                 runReader (compileProgression (AU Elimination (IdList [] []))) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)", [])
             it "compiles a CU Progression" $
                 runReader (compileProgression (CU (Increase "votes" (Num 1)) (IdList [] []))) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nfor player in idList1: player.updateCounter(1, \"votes\")", [])
+        describe "compilePhaseList" $ do
+            it "compiles an empty phase list" $ do
+                runReader (compilePhaseList []) ids `shouldBe` (empty, [])
+            it "compiles a non-empty phase list" $ do
+                runReader (compilePhaseList [Act (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [] []))]) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)\nincludeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)", [])

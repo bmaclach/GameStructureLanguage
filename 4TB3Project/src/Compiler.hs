@@ -8,7 +8,7 @@ module Compiler (
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
     compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
-    compileAffUpdate, compileCounterUpdate, compileProgression
+    compileAffUpdate, compileCounterUpdate, compileProgression, compilePhaseList
 ) where
 
 import AST
@@ -99,7 +99,19 @@ data IdNames = IdNames {
     counters :: [Name]
 }
 
--- | Compiles a Progression into python code for updating the affiliation or counter for a given identifier list.
+-- | Compiles a Phase into python code for the action or progression. The list of Docs is for any function definitions that are required.
+compilePhaseList :: [Phase] -> Reader IdNames (Doc, [Doc])
+compilePhaseList [] = return $ (empty, [])
+compilePhaseList ((Act a):pl) = do
+    adoc <- compileAction a
+    pldoc <- compilePhaseList pl
+    return $ (vcat [fst adoc, fst pldoc], snd adoc ++ snd pldoc)
+compilePhaseList ((Prog p):pl) = do
+    pdoc <- compileProgression p
+    pldoc <- compilePhaseList pl
+    return $ (vcat [fst pdoc, fst pldoc], snd pdoc ++ snd pldoc)
+
+-- | Compiles a Progression into python code for updating the affiliation or counter for a given identifier list. The list of Docs is for any function definitions that are required.
 compileProgression :: Progression -> Reader IdNames (Doc, [Doc])
 compileProgression (AU au il) = do
     ildoc <- compileIdentifierList il 1
