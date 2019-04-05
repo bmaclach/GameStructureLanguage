@@ -712,3 +712,8 @@ main = hspec $ do
                 runReader (compileCounterUpdate (Decrease "votes" (Num 3))) ids `shouldBe` text "for player in idList1: player.updateCounter(- (3), \"votes\")"
             it "compiles a Set counter update" $
                 runReader (compileCounterUpdate (Set "votes" (Num 0))) ids `shouldBe` text "for player in idList1: player.setCounter(0, \"votes\")"
+        describe "compileProgression" $ do
+            it "compiles an AU Progression" $
+                runReader (compileProgression (AU Elimination (IdList [] []))) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)", [])
+            it "compiles a CU Progression" $
+                runReader (compileProgression (CU (Increase "votes" (Num 1)) (IdList [] []))) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nfor player in idList1: player.updateCounter(1, \"votes\")", [])

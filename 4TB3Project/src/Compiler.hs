@@ -8,7 +8,7 @@ module Compiler (
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
     compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
-    compileAffUpdate, compileCounterUpdate
+    compileAffUpdate, compileCounterUpdate, compileProgression
 ) where
 
 import AST
@@ -98,6 +98,17 @@ data IdNames = IdNames {
     affs :: [Name],
     counters :: [Name]
 }
+
+-- | Compiles a Progression into python code for updating the affiliation or counter for a given identifier list.
+compileProgression :: Progression -> Reader IdNames (Doc, [Doc])
+compileProgression (AU au il) = do
+    ildoc <- compileIdentifierList il 1
+    audoc <- compileAffUpdate au
+    return $ (vcat [fst ildoc, audoc], snd ildoc)
+compileProgression (CU cu il) = do
+    ildoc <- compileIdentifierList il 1
+    cudoc <- compileCounterUpdate cu
+    return $ (vcat [fst ildoc, cudoc], snd ildoc)
 
 -- | Compiles a CounterUpdate into python code for updating a counter.
 compileCounterUpdate :: CounterUpdate -> Reader IdNames Doc
