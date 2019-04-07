@@ -28,7 +28,7 @@ languageDef = emptyDef {
         "otherwise", "for", "elimination", "add", "remove", "number", 
         "preserving", "swap", "adding", "change", "to", "merge", "increase", 
         "decrease", "set", "results", "except", "everyone", "chance", 
-        "nominated", "teied", "eliminated", "winner", "loser", "majority", 
+        "nominated", "tied", "eliminated", "winner", "loser", "majority", 
         "minority", "highest", "lowest", "most", "least", "tiebroken", "member",
         "jury", "survive", "reach"],
     T.reservedOpNames = ["*"],

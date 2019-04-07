@@ -3,7 +3,7 @@ John, Joe all with score called sets
 
 Rounds:
 competition between everyone.
-increase set by 1 for winner of competition repeated 7 times;
+increase sets by 1 for winner of competition repeated 7 times;
 
 Win:
 reach 4 sets

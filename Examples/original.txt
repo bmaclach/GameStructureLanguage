@@ -5,12 +5,12 @@ Rounds:
 competition between everyone.
 increase votes by 3 for winner of competition.
 allocation of votes by everyone.
-self-included directed vote by everyone * results of allocation between everyone.
+directed vote by everyone * results of allocation between everyone including self.
 increase position by results of vote for everyone.
-elimination of lowest position (everyone) tiebroken by
-    lowest votes (tied) tiebroken by
+elimination of lowest position (everyone) tiebroken by lowVote:
+    lowest votes (tied) tiebroken by rocks:
         chance (tied)
-repeat 9 times;
+repeated 9 times;
 
 Win:
 survive

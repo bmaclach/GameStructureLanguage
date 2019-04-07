@@ -231,7 +231,7 @@ getNamesFromPlayerList ((P nm atl):pl) = if nm `elem` (getNamesFromPlayerList pl
 getAllAffiliations :: Game -> [Name] -> [Name]
 getAllAffiliations (G (PI pl tl _) rl _) pn = if or (map (isNameTaken pn) tl) 
     then error "Player and affiliation have same name. Unique names required."
-    else nub $ "nominated" : (getAffsFromPlayerList pl pn ++ tl ++ concat (map ((flip getAffsFromRound) pn) rl))
+    else nub $ "nominee" : (getAffsFromPlayerList pl pn ++ tl ++ concat (map ((flip getAffsFromRound) pn) rl))
 
 -- | Extracts affiliations from a player list and stores them in a list, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
 getAffsFromPlayerList :: [Player] -> [Name] -> [Name]

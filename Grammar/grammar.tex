@@ -13,7 +13,7 @@
 <game> ::= `Players:' <teamList> `Rounds:' <roundList> `Win:' 
 <winCondition>
 
-<teamList> ::= (<team> \{`,' <team>\} | <playerList> | `randomly divide' 
+<teamList> ::= (<team> \{`;' <team>\} | <playerList> | `randomly divide' 
 <playerList> `into' <nameList>) [`all with' <attributeList>]
 
 <team> ::= `team' <name> `:' <playerList>
@@ -96,7 +96,7 @@
 
 <voteReference> ::= `vote' [<number>]
 
-<tiebreaker> ::= `tiebroken by' <name> [<action>] <identifier>
+<tiebreaker> ::= `tiebroken by' <name> `:' [<action>] <identifier>
 
 <name> ::= (`a' | ... | `z' | `A' | ... | `Z') \{`a' | ... | `z' | `A' | ... | 
 `Z' | `0' | ... | `9'\}

@@ -1,7 +1,7 @@
 from gamelib import *
 
 def hohTiebreaker(tied):
-    game.vote([x for x in game.playerList if "HOH" in x.affiliations], [x for x in game.playerList if "nominated" in x.affiliations])
+    game.vote([x for x in game.playerList if "HOH" in x.affiliations], [x for x in game.playerList if "nominee" in x.affiliations])
     evictee = getVoteMinOrMax(game.voteResults[-1], True)
     del game.voteResults[-1] #tiebreaker vote results should not be included in vote history
     return evictee
@@ -13,20 +13,20 @@ def roundType1():
         player.addAff("houseguest")
     game.compResults[0]["winner"].addAff("HOH")
     game.nominate([x for x in game.playerList if "HOH" in x.affiliations], 2, game.playerList)
-    compPlayers = [x for x in game.playerList if "HOH" in x.affiliations or "nominated" in x.affiliations]
+    compPlayers = [x for x in game.playerList if "HOH" in x.affiliations or "nominee" in x.affiliations]
     for i in range(3):
         compPlayers.append(randomDraw([x for x in game.playerList if x not in compPlayers]))
     game.getCompResults(compPlayers, True, False)
     if uses(game.compResults[1]["winner"]):
-        game.vote([game.compResults[1]["winner"]], [x for x in game.playerList if "nominated" in x.affiliations], True)
+        game.vote([game.compResults[1]["winner"]], [x for x in game.playerList if "nominee" in x.affiliations], True)
         saved = getVoteMinOrMax(game.voteResults[-1], True)
         game.nominate([x for x in game.playerList if "HOH" in x.affiliations], 1, [x for x in game.playerList if x != game.compResults[1]["winner"]])
-        saved.removeAff("nominated")
+        saved.removeAff("nominee")
         del game.voteResults[-1] # vote in branch should not be included in all votes
-    game.vote([x for x in game.playerList if "HOH" not in x.affiliations and "nominated" not in x.affiliations], [x for x in game.playerList if "nominated" in x.affiliations])
+    game.vote([x for x in game.playerList if "HOH" not in x.affiliations and "nominee" not in x.affiliations], [x for x in game.playerList if "nominee" in x.affiliations])
     game.eliminate([getVoteMinOrMax(game.voteResults[-1], True, hohTiebreaker)])
-    for player in [x for x in game.playerList if "nominated" in x.affiliations]:
-        player.removeAff("nominated")
+    for player in [x for x in game.playerList if "nominee" in x.affiliations]:
+        player.removeAff("nominee")
 
 def roundType2():
     game.getCompResults([x for x in game.playerList if not "HOH" in x.affiliations], True, False)
@@ -37,15 +37,15 @@ def roundType2():
     game.nominate([x for x in game.playerList if "HOH" in x.affiliations], 2, game.playerList)
     game.getCompResults(game.playerList, True, False)
     if uses(game.compResults[1]["winner"]):
-        game.vote([game.compResults[1]["winner"]], [x for x in game.playerList if "nominated" in x.affiliations], True)
+        game.vote([game.compResults[1]["winner"]], [x for x in game.playerList if "nominee" in x.affiliations], True)
         saved = getVoteMinOrMax(game.voteResults[0], True)
         game.nominate([x for x in game.playerList if "HOH" in x.affiliations], 1, [x for x in game.playerList if x != game.compResults[1]["winner"]])
-        saved.removeAff("nominated")
+        saved.removeAff("nominee")
         del game.voteResults[-1] # vote in branch should not be included in all votes
-    game.vote([x for x in game.playerList if "HOH" not in x.affiliations and "nominated" not in x.affiliations], [x for x in game.playerList if "nominated" in x.affiliations])
+    game.vote([x for x in game.playerList if "HOH" not in x.affiliations and "nominee" not in x.affiliations], [x for x in game.playerList if "nominee" in x.affiliations])
     game.eliminate([getVoteMinOrMax(game.voteResults[-1], True, hohTiebreaker)])
-    for player in [x for x in game.playerList if "nominated" in x.affiliations]:
-        player.removeAff("nominated")
+    for player in [x for x in game.playerList if "nominee" in x.affiliations]:
+        player.removeAff("nominee")
 
 def roundType3():
     game.getCompResults(game.playerList, True, False)

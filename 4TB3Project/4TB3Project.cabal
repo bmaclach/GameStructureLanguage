@@ -48,6 +48,7 @@ executable 4TB3Project-exe
   build-depends:
       4TB3Project
     , base >=4.7 && <5
+    , pretty >=1.1.3.6
   default-language: Haskell2010
 
 test-suite 4TB3Project-test

@@ -1,8 +1,8 @@
 Players:
-team Jays: Jose, Kevin, team Yankees: John, Joe all with score called points
+team Jays: Jose, Kevin; team Yankees: John, Joe all with score called points
 
 Rounds:
-team competition between Jays, Yankees.
+scored team competition between Jays, Yankees.
 increase points by results of competition for everyone
 repeated 9 times;
 

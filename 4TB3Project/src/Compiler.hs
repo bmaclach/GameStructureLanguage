@@ -325,7 +325,7 @@ compileIdentifier Everyone _ = return $ (text "ident = game.playerList", [])
 compileIdentifier (Chance il) n = do
     ildoc <- compileIdentifierList il (n+1)
     return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "randomDraw" <> parens (text "idList" <> integer (n+1)))], snd ildoc)
-compileIdentifier Nominated _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text "nominated") <+> text "in x.affiliations"), [])
+compileIdentifier Nominated _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text "nominee") <+> text "in x.affiliations"), [])
 compileIdentifier Tied _ = return $ (text "ident = tied", [])
 compileIdentifier Eliminated _ = return $ (text "ident = eliminated", [])
 compileIdentifier (N nm) _ = do
@@ -401,20 +401,20 @@ compileValue (Count nm) = do
         then return $ text "player.counters" <> brackets (doubleQuotes (text nm))
         else error ("Reference to non-existent counter " ++ nm)
 compileValue (Result (Cmp cr)) = return $ compileCompRef cr <> brackets (doubleQuotes (text "scores")) <> brackets (text "player") <+> text "if player in" <+> compileCompRef cr <> brackets (doubleQuotes (text "scores")) <> text ".keys() else" <+> compileCompRef cr <> brackets (doubleQuotes (text "scores")) <> brackets (brackets (text "x for x in game.teamList if x in player.affiliations")<> brackets (text "0")) 
-compileValue (Result (Vt vr)) = return $ compileVoteRef vr <> brackets (doubleQuotes (text "votes")) <> brackets (text "player")
-compileValue (Result (Alloc ar)) = return $ compileAllocRef ar <> brackets (doubleQuotes (text "allocated")) <> brackets (text "player")
+compileValue (Result (Vt vr)) = return $ compileVoteRef vr <> brackets (text "player")
+compileValue (Result (Alloc ar)) = return $ compileAllocRef ar <> brackets (text "player")
 
 -- | Compiles a CompRef into python code for accessing the compResults array at the referenced index. Note that indexing starts at 1 for the game language.
 compileCompRef :: CompRef -> Doc
-compileCompRef (CRef num) = text "compResults" <> brackets (integer (num-1))
+compileCompRef (CRef num) = text "game.compResults" <> brackets (integer (num-1))
 
 -- | Compiles a VoteRef into python code for accessing the voteResults array at the referenced index. Note that indexing starts at 1 for the game language.
 compileVoteRef :: VoteRef -> Doc
-compileVoteRef (VRef num) = text "voteResults" <> brackets (integer (num-1))
+compileVoteRef (VRef num) = text "game.voteResults" <> brackets (integer (num-1))
 
 -- | Compiles an AllocRef into python code for accessing the allocateResults array at the referenced index. Note that indexing starts at 1 for the game language.
 compileAllocRef :: AllocRef -> Doc
-compileAllocRef (ARef num) = text "allocateResults" <> brackets (integer (num-1))
+compileAllocRef (ARef num) = text "game.allocateResults" <> brackets (integer (num-1))
 
 -- * Compiling Win Conditions
 
@@ -429,14 +429,14 @@ compileWinCondition Survive = return $ (vcat [text "winners =" <+> doubleQuotes 
     nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ game.playerList[0].name"),
     text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], [])
 compileWinCondition (Jury num) = return $ (vcat [text "game.juryVote" <> parens (integer num), text "winner = getVoteMinOrMax(game.voteResults[-1], True)", text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))], [])
-compileWinCondition (FinalComp Team) = return $ (vcat [text "game.getTeamCompResults(game.teamList, True, False)", text "winner = compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner +" <+> doubleQuotes (text " won!"))], [])
-compileWinCondition (FinalComp Individual) = return $ (vcat [text "game.getCompResults(game.playerList, True, False)", text "winner = compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))], [])
+compileWinCondition (FinalComp Team) = return $ (vcat [text "game.getTeamCompResults(game.teamList, True, False)", text "winner = game.compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner +" <+> doubleQuotes (text " won!"))], [])
+compileWinCondition (FinalComp Individual) = return $ (vcat [text "game.getCompResults(game.playerList, True, False)", text "winner = game.compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))], [])
 compileWinCondition (Reach gl Individual) = do
     gldoc <- compileGoalList gl
-    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners += player.name"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winners) == 1:"), nest 12 (text "winnerString = winners[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winners[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winners[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!")))], [])
+    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners.append(player.name)"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winners) == 1:"), nest 12 (text "winnerString = winners[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winners[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winners[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!"))), nest 8 (text "break")], [])
 compileWinCondition (Reach gl Team) = do
     gldoc <- compileGoalList gl
-    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners += player"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winTeams = list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in winners if x in y.affiliations")))), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winTeams) == 1:"), nest 12 (text "winnerString = winTeams[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winTeams[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!")))], [])
+    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners.append(player)"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winTeams = list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in winners if x in y.affiliations")))), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winTeams) == 1:"), nest 12 (text "winnerString = winTeams[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winTeams[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!"))), nest 8 (text "break")], [])
 compileWinCondition (Ids il Individual) = do
     ildoc <- compileIdentifierList il 1
     return $ (vcat [fst ildoc, text "winners =" <+> doubleQuotes empty,

@@ -159,7 +159,7 @@ class Game:
         for player in pool:
             print(player.name)
         poolNames = [x.name for x in pool]
-        nominated = [x.name for x in self.playerList if "nominated" in x.affiliations]
+        nominated = [x.name for x in self.playerList if "nominee" in x.affiliations]
         for nominator in nominators:
             for i in range(numNominated):
                 haveNomination = False
@@ -174,7 +174,7 @@ class Game:
                         print(nominee + " is not eligible for nomination!")
         for player in pool:
             if player.name in nominated:
-                player.addAff("nominated")
+                player.addAff("nominee")
 
     def allocate(self, players, allocated):
         print("Allocation of " + allocated + ".")

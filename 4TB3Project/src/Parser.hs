@@ -305,7 +305,7 @@ identifierVal = do
 identifierP = do {reserved "everyone"
                 ; return Everyone}
              <|> do {reserved "chance"
-                    ; il <- parens identifierList
+                    ; il <- option (IdList [IdVal Everyone (Num 1)] []) (parens identifierList)
                     ; return $ Chance il}
              <|> do {reserved "nominated"
                     ; return Nominated}
@@ -335,12 +335,12 @@ identifierP = do {reserved "everyone"
                     ; return $ Minority vr tb}
              <|> do {(reserved "highest" <|> reserved "most")
                     ; nm <- identifier
-                    ; idl <- parens identifierList
+                    ; idl <- option (IdList [IdVal Everyone (Num 1)] []) (parens identifierList)
                     ; tb <- optionMaybe tiebreaker
                     ; return $ Most nm idl tb}
              <|> do {(reserved "lowest" <|> reserved "least")
                     ; nm <- identifier
-                    ; idl <- parens identifierList
+                    ; idl <- option (IdList [IdVal Everyone (Num 1)] []) (parens identifierList)
                     ; tb <- optionMaybe tiebreaker
                     ; return $ Least nm idl tb}
 
@@ -425,6 +425,7 @@ tiebreaker = do
     reserved "tiebroken"
     reserved "by"
     nm <- identifier
+    colon
     act <- optionMaybe action
     ident <- identifierP
     return $ Tiebreak nm act ident
