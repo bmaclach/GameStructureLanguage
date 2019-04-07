@@ -8,7 +8,7 @@ elimination of majority of vote tiebroken by revote:
     vote by loser of competition except tied between tied 
     majority of vote tiebroken by pastVotes:
         most votesAgainst (tied) tiebroken by rocks:
-            chance (loser of competition except tied).
+            chance 1 (loser of competition except tied).
 increase votesAgainst by results of vote for loser of competition
 repeated 6 times with modifications:
 just round 5 before phase 1 insert swap Kucha, Ogakor for everyone;
@@ -18,7 +18,7 @@ elimination of majority of vote tiebroken by revote2:
     vote by everyone except tied between tied 
     majority of vote tiebroken by pastVotes2:
         most votesAgainst (tied) tiebroken by rocks2:
-            chance (everyone except tied, winner of competition).
+            chance 1 (everyone except tied, winner of competition).
 increase votesAgainst by results of vote for everyone
 repeated 8 times with modifications:
 just round 1 before phase 1 insert merge Kucha, Ogakor for everyone;

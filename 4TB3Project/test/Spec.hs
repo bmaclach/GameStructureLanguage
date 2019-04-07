@@ -120,9 +120,9 @@ main = hspec $ do
             it "parses everyone" $
                 parseGame identifierP "everyone" `shouldBe` Everyone
             it "parses chance with no identifier list" $
-                parseGame identifierP "chance" `shouldBe` Chance (IdList [IdVal Everyone (Num 1)] [])
+                parseGame identifierP "chance 3" `shouldBe` Chance 3 (IdList [IdVal Everyone (Num 1)] [])
             it "parses chance with an identifier list" $
-                parseGame identifierP "chance (nominated)" `shouldBe` Chance (IdList [IdVal Nominated (Num 1)] [])
+                parseGame identifierP "chance 3 (nominated)" `shouldBe` Chance 3 (IdList [IdVal Nominated (Num 1)] [])
             it "parses nominated" $
                 parseGame identifierP "nominated" `shouldBe` Nominated
             it "parses tied" $
@@ -214,9 +214,9 @@ main = hspec $ do
                 parseGame action "vote by everyone between everyone" `shouldBe` Dec (Vote (IdList [IdVal Everyone (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False)
         describe "tiebreaker" $ do
             it "parses a tiebreaker with no action" $
-                parseGame tiebreaker "tiebroken by rocks: chance (everyone)" `shouldBe` Tiebreak "rocks" Nothing (Chance (IdList [IdVal Everyone (Num 1)] [])) 
+                parseGame tiebreaker "tiebroken by rocks: chance 1 (everyone)" `shouldBe` Tiebreak "rocks" Nothing (Chance 1 (IdList [IdVal Everyone (Num 1)] [])) 
             it "parses a tiebreaker with an action" $
-                parseGame tiebreaker "tiebroken by rocks: competition between everyone chance (everyone)" `shouldBe` Tiebreak "rocks" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True))) (Chance (IdList [IdVal Everyone (Num 1)] [])) 
+                parseGame tiebreaker "tiebroken by rocks: competition between everyone chance 1 (everyone)" `shouldBe` Tiebreak "rocks" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True))) (Chance 1 (IdList [IdVal Everyone (Num 1)] [])) 
         describe "counterUpdate" $ do
             it "parses an increase to a counter" $
                 parseGame counterUpdate "increase votes by 3" `shouldBe` Increase "votes" (Num 3)
@@ -353,7 +353,7 @@ main = hspec $ do
             it "adds to CompInfo if loser encountered with 0 index" $
                 getCompRefId (Loser (CRef 0)) 3 False `shouldBe` [(3, False, True)]
             it "adds to CompInfo if Chance encountered" $
-                getCompRefId (Chance (IdList [IdVal (Winner (CRef 2)) (Num 1)] [])) 3 False 
+                getCompRefId (Chance 1 (IdList [IdVal (Winner (CRef 2)) (Num 1)] [])) 3 False 
                     `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Majority encountered with tiebreaker" $
                 getCompRefId (Majority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
@@ -475,7 +475,7 @@ main = hspec $ do
             it "does not change an N if it is a player name" $
                 updateId ["Test"] [] (N "Test") `shouldBe` (N "Test")
             it "changes an N in a Chance identifier" $
-                updateId [] ["Test"] (Chance (IdList [] [N "Test"])) `shouldBe`(Chance (IdList [] [A "Test"]))
+                updateId [] ["Test"] (Chance 1 (IdList [] [N "Test"])) `shouldBe`(Chance 1 (IdList [] [A "Test"]))
             it "changes an N in a Majority tiebreaker" $
                 updateId [] ["Test"] (Majority (VRef 1) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Majority (VRef 1) (Just (Tiebreak "a" Nothing (A "Test"))))
             it "changes an N in a Minority tiebreaker" $
@@ -606,7 +606,7 @@ main = hspec $ do
             it "compiles Everyone into the playerList" $
                 runReader (compileIdentifier Everyone 1) ids `shouldBe` (text "ident = game.playerList", [])
             it "compiles Chance into a call to randomDraw" $
-                runReader (compileIdentifier (Chance (IdList [IdVal Everyone (Num 2)] [N "Brooks"])) 1) ids `shouldBe` (text "includeList2 = []\nident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2\nincludeList2 += idVal\nexcludeList2 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [randomDraw(idList2)]", [])
+                runReader (compileIdentifier (Chance 1 (IdList [IdVal Everyone (Num 2)] [N "Brooks"])) 1) ids `shouldBe` (text "includeList2 = []\nident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2\nincludeList2 += idVal\nexcludeList2 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = randomDraw(1, idList2)", [])
             it "compiles Nominated into a list of nominated players" $
                 runReader (compileIdentifier Nominated 1) ids `shouldBe` (text "ident = [x for x in game.playerList if \"nominee\" in x.affiliations]", [])
             it "compiles Tied into local variable tied for tiebreaker functions" $

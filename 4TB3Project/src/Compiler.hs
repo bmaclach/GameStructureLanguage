@@ -322,9 +322,9 @@ compileIdentifiers il n = do
 -- | Compiles an Identifier into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
 compileIdentifier :: Identifier -> Integer -> Reader IdNames (Doc, [Doc])
 compileIdentifier Everyone _ = return $ (text "ident = game.playerList", [])
-compileIdentifier (Chance il) n = do
+compileIdentifier (Chance num il) n = do
     ildoc <- compileIdentifierList il (n+1)
-    return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "randomDraw" <> parens (text "idList" <> integer (n+1)))], snd ildoc)
+    return $ (vcat [fst ildoc, text "ident =" <+> text "randomDraw" <> parens (integer num <> comma <+> text "idList" <> integer (n+1))], snd ildoc)
 compileIdentifier Nominated _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text "nominee") <+> text "in x.affiliations"), [])
 compileIdentifier Tied _ = return $ (text "ident = tied", [])
 compileIdentifier Eliminated _ = return $ (text "ident = eliminated", [])

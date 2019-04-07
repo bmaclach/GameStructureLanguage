@@ -9,7 +9,7 @@ directed vote by everyone * results of allocation between everyone including sel
 increase position by results of vote for everyone.
 elimination of lowest position (everyone) tiebroken by lowVote:
     lowest votes (tied) tiebroken by rocks:
-        chance (tied)
+        chance 1 (tied)
 repeated 9 times;
 
 Win:

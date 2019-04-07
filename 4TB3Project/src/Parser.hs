@@ -305,8 +305,9 @@ identifierVal = do
 identifierP = do {reserved "everyone"
                 ; return Everyone}
              <|> do {reserved "chance"
+                    ; num <- number
                     ; il <- option (IdList [IdVal Everyone (Num 1)] []) (parens identifierList)
-                    ; return $ Chance il}
+                    ; return $ Chance num il}
              <|> do {reserved "nominated"
                     ; return Nominated}
              <|> do {reserved "tied"

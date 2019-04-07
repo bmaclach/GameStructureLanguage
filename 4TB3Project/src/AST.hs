@@ -111,7 +111,7 @@ data Identifier
     -- | Refers to every active player in the game
     = Everyone 
     -- | Refers to a random player between a pool of potential players
-    | Chance IdentifierList 
+    | Chance Number IdentifierList 
     -- | Refers to players who were nominated as part of a nomination decision
     | Nominated 
     -- | Refers to players who are involved in a tie

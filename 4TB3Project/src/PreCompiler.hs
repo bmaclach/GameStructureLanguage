@@ -131,7 +131,7 @@ getCompRefId (Loser (CRef num)) n t = if not (t && num == 0)
     then [(compnum, False, True)]
     else []
         where compnum = if num == 0 then n else num
-getCompRefId (Chance il) n t = getCompRefIdList il n t
+getCompRefId (Chance _ il) n t = getCompRefIdList il n t
 getCompRefId (Majority _ (Just (Tiebreak _ _ id))) n t = getCompRefId id n True
 getCompRefId (Minority _ (Just (Tiebreak _ _ id))) n t = getCompRefId id n True
 getCompRefId (Most _ il Nothing) n t = getCompRefIdList il n t
@@ -203,7 +203,7 @@ updateId pn an (N nm) = if nm `elem` an
     then A nm else if nm `elem` pn
         then N nm 
         else error ("Name " ++ nm ++ " does not match any player or affiliation")
-updateId pn an (Chance il) = Chance (updateIdListIds pn an il)
+updateId pn an (Chance num il) = Chance num (updateIdListIds pn an il)
 updateId pn an (Majority vr (Just tb)) = Majority vr (Just (updateTiebreakIds pn an tb))
 updateId pn an (Minority vr (Just tb)) = Minority vr (Just (updateTiebreakIds pn an tb))
 updateId pn an (Most c il Nothing) = Most c (updateIdListIds pn an il) Nothing

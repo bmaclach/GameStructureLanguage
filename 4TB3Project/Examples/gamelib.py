@@ -14,6 +14,8 @@ class Game:
         self.voteResults = []
         self.compResults = []
         self.allocateResults = []
+        for player in [x for x in self.playerList if "nominee" in x.affiliations]:
+            player.removeAff("nominee")
 
     def getScoredTeamCompResults(self, compTeams):
         print("Team competition between:")
@@ -393,6 +395,11 @@ def getMinOrMax(players, metric, minOrMax, tiebreaker=defaultTiebreaker):
     else:
         return sortedPlayers[0]
 
-def randomDraw(pool):
-    draw = random.randint(0, len(pool)-1)
-    return pool[draw]
+def randomDraw(num, pool):
+    remainingPool = pool.copy()
+    chosen = []
+    for i in range(num):
+        draw = random.randint(0, len(remainingPool)-1)
+        chosen.append(remainingPool[draw])
+        del remainingPool[draw]
+    return chosen
