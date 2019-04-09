@@ -94,7 +94,7 @@ data AffiliationUpdate
 data CounterUpdate 
     -- | For when a given counter should be increased by some value
     = Increase Name Value 
-    -- | For when a given counter should be increased by some value
+    -- | For when a given counter should be decreased by some value
     | Decrease Name Value 
     -- | For when a given counter should be set to some value
     | Set Name Value
