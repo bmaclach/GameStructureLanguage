@@ -1,4 +1,4 @@
-includeList1 = []; ident = game.playerList; 
+includeList1 = []; ident = game.playerList
 idVal = ident; includeList1 += idVal
 excludeList1 = []
 idList1 = [x for x in includeList1 
