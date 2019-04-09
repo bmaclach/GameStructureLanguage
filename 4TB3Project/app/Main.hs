@@ -1,8 +1,6 @@
 module Main where
 
-import Scanner
 import Parser (parseGame, game)
-import AST
 import PreCompiler (preCompile)
 import Compiler (compileGame)
 
