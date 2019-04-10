@@ -5,6 +5,9 @@ blockverticalspace=5mm, innermargin=5mm]{tikzposter}
 \usepackage[rounded]{syntax}
 \usepackage{listings}
 \usepackage{url}
+\usepackage{geometry}
+\geometry{papersize={600mm,900mm}}
+
 
 \title{A language and compiler for game structures}
 \author{Brooks MacLachlan}
@@ -14,8 +17,6 @@ blockverticalspace=5mm, innermargin=5mm]{tikzposter}
 \usetheme{Desert}
 
 \useblockstyle{Basic}
-
-\usebackgroundstyle{Empty}
 
 \begin{document}
 	\maketitle
@@ -28,11 +29,13 @@ blockverticalspace=5mm, innermargin=5mm]{tikzposter}
 					\item Ex. sports, reality show games
 				\end{itemize}
 				\item Infinitely many games are possible, but running most 
-				games would require a human ``host''
+				games would require a human ``host'', or someone with 
+				sufficient coding expertise to write their own code for a game 
+				to be played online
 				\item An easy-to-understand DSL for describing game structures
 				and generating programs to run the game could reduce the 
-				need for human hosts and eliminate 
-				possibility of host biases affecting game results
+				workload for human hosts and reduce the possibility of host 
+				biases affecting game results
 			\end{itemize}}
 		\block{Related Work}{\begin{itemize}
 				\item Existing game DSLs are focused on video games or computer 
@@ -47,6 +50,9 @@ blockverticalspace=5mm, innermargin=5mm]{tikzposter}
 			\begin{itemize}
 				\item 1500+ lines of Haskell code
 				\item Target language is Python
+				\begin{itemize}
+					\item Popular, succinct
+				\end{itemize}
 			\end{itemize}
 			\textbf{Documentation}
 			\begin{itemize}
@@ -61,7 +67,7 @@ blockverticalspace=5mm, innermargin=5mm]{tikzposter}
 				integration tests
 				\begin{itemize}
 					\item Tennis, baseball, Survivor, Big Brother, The Genius, 
-					original
+					and a completely original game
 				\end{itemize}
 			\end{itemize}}
 		\begin{subcolumns}
@@ -76,10 +82,13 @@ blockverticalspace=5mm, innermargin=5mm]{tikzposter}
 			$[5]$ OnlineSurvivor. 
 			\url{https://www.reddit.com/r/OnlineSurvivor/}}
 			\subcolumn{0.55}
-			\block{Modules}{\includegraphics{ModuleHierarchy}}
+			\block{Modules}{\includegraphics[width=0.22\textwidth]{ModuleHierarchy}}
 		\end{subcolumns}
 		\column{0.5}
 		\block{Subset of the Grammar}{
+			\textbf{Challenge}: The language should be understandable for 
+			someone without coding experience, but sufficiently formal 
+			to be parsed
 			\begin{grammar}
 				<game> ::= `Players:' <teamList> `Rounds:' <roundList> `Win:' 
 				<winCondition>
@@ -111,10 +120,10 @@ blockverticalspace=5mm, innermargin=5mm]{tikzposter}
 			\item The domain of game structures can be captured by a DSL, 
 			including well-known and completely original game structures
 			\item The generated code in its current form is not particularly 
-			useful, improve with user interface, online-support, additional 
-			features such as game advantages, more conditional 
+			useful, could be improved with a user interface, online-support, 
+			additional features such as game advantages, more conditional 
 			possibilities within rounds, variable names for phases, rounds, or 
-			tiebreakers
+			tiebreakers, which would make the language more readable
 		\end{itemize}
 	}
 	\end{columns}

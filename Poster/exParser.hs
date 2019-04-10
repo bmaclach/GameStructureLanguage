@@ -4,3 +4,4 @@ competition = do {reserved "scored"
                  ; reserved "between"
                  ; il <- identifierList
                  ; return $ Scored cmp il}
+              <|> ...
