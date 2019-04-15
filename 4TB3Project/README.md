@@ -1,6 +1,6 @@
 # 4TB3Project
 
-To build the software and run the examples, run `cabal run`. The examples will be built to the Example/ directory.
+To build the software and run the examples, run `cabal run`. The examples will be built to the Examples/ directory. To run an example, navigate to the Examples directory and run `python examplename.py`, replacing "examplename" with the filename for the example you want to run. Note that all examples have been tested with Python 3, and there are no guarantees as to whether they will work with Python 2.
 
 To run the tests, run `cabal test`.
 

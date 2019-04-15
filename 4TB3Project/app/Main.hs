@@ -19,4 +19,4 @@ generateGame (x:xs) = do
 
 -- | List of filenames for the example games
 exGames :: [String]
-exGames = ["tennis", "baseball", "survivor", "bigbrother", "thegenius", "original"]
+exGames = ["tennis", "baseball", "survivor", "bigbrother", "thegenius", "original", "simpledemo"]
