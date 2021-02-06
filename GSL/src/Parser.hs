@@ -389,6 +389,7 @@ allocateReference = do
 actReference = do {cr <- compReference
                   ; return $ Cmp cr}
                <|> do {vr <- voteReference
+               
                   ; return $ Vt vr}
                <|> do {ar <- allocateReference
                   ; return $ Alloc ar}
@@ -422,6 +423,7 @@ modifier = do {reserved "just"
                ; p <- phase
                ; return $ From rr tr pr p}
 
+-- | Parses tiebreakers
 tiebreaker = do
     reserved "tiebroken"
     reserved "by"

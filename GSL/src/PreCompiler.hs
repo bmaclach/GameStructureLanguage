@@ -212,6 +212,7 @@ updateId pn an (Least c il Nothing) = Least c (updateIdListIds pn an il) Nothing
 updateId pn an (Least c il (Just tb)) = Least c (updateIdListIds pn an il) (Just (updateTiebreakIds pn an tb))
 updateId _ _ id = id
 
+-- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for a Tiebreaker
 updateTiebreakIds :: [Name] -> [Name] -> Tiebreaker -> Tiebreaker
 updateTiebreakIds pn an (Tiebreak nm Nothing id) = Tiebreak nm Nothing (updateId pn an id)
 updateTiebreakIds pn an (Tiebreak nm (Just a) id) = Tiebreak nm (Just (updateActionIds pn an a)) (updateId pn an id)
