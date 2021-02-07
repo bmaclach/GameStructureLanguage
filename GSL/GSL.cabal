@@ -55,6 +55,9 @@ test-suite GSL-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      ParserSpec,
+      PreCompilerSpec,
+      CompilerSpec,
       Paths_GSL
   hs-source-dirs:
       test
