@@ -7,7 +7,7 @@ module AST (
     Competition(..), Decision(..), Progression(..), AffiliationUpdate(..),
     CounterUpdate(..), IdentifierList(..), IdentifierVal(..), Identifier(..), 
     Value(..), ActRef(..), CompRef(..), VoteRef(..), AllocRef(..), 
-    Tiebreaker(..), Goal(..), WinCondition(..)
+    Tiebreaker(..), TiebreakerRef(..), Goal(..), WinCondition(..)
 ) where
 
 -- | A name is represented by a string
@@ -16,8 +16,8 @@ type Name = String
 -- | A number is represented by an integer
 type Number = Integer
 
--- | A game is information about the players, a list of team names, a list of rounds, and a list of win conditions
-data Game = G PlayerInfo [Round] WinCondition deriving (Show, Eq)
+-- | A game is information about the players, a list of team names, a list of rounds, a list of win conditions, and a potentially empty list of tiebreaker definitions
+data Game = G PlayerInfo [Round] WinCondition [Tiebreaker] deriving (Show, Eq)
 
 -- | Player information includes the list of players, the list of teams, and a boolean that, if true, means the players should be randomly and evenly divided between the teams
 data PlayerInfo = PI [Player] [Name] Bool deriving (Show, Eq)
@@ -127,13 +127,13 @@ data Identifier
     -- | Refers to the loser of a competition
     | Loser CompRef 
     -- | Refers to the player who received the majority of the votes, where the tiebreaker determines what should be done in the case of a tie.
-    | Majority VoteRef (Maybe Tiebreaker) 
+    | Majority VoteRef (Maybe TiebreakerRef) 
     -- | Refers to the player who received the minority of the votes, where the tiebreaker determines what should be done in the case of a tie.
-    | Minority VoteRef (Maybe Tiebreaker) 
+    | Minority VoteRef (Maybe TiebreakerRef) 
     -- | Refers to the player who has the most of a given counter, considering only those players referenced by the list of identifiers, with the tiebreaker determining what should be done in the case of a tie.
-    | Most Name IdentifierList (Maybe Tiebreaker)
+    | Most Name IdentifierList (Maybe TiebreakerRef)
     -- | Refers to the player who has the least of a given counter, considering only those players referenced by the list of identifiers, with the tiebreaker determining what should be done in the case of a tie. 
-    | Least Name IdentifierList (Maybe Tiebreaker)
+    | Least Name IdentifierList (Maybe TiebreakerRef)
     deriving (Show, Eq)
 
 -- | A value is any reference that resolves to a number
@@ -158,8 +158,11 @@ data VoteRef = VRef Number deriving (Show, Eq)
 -- | An allocation is referenced by a number for when it occured
 data AllocRef = ARef Number deriving (Show, Eq)
 
--- | A tiebreaker might include an action before choosing an identifier to resolve a tie
+-- | A tiebreaker is named and might include an action before choosing an identifier to resolve a tie
 data Tiebreaker = Tiebreak Name (Maybe Action) Identifier deriving (Show, Eq)
+
+-- | A tiebreaker is referenced by its name
+data TiebreakerRef = TieRef Name deriving (Show, Eq)
 
 -- | A goal is a number and the name of a counter for which the number must be reached
 data Goal = Gl Number Name deriving (Show, Eq)

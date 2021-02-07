@@ -7,14 +7,16 @@ module PreCompiler (
     combineCompInfo, getCompRefId, getCompRefIdentifiers, getCompRefIdVals,
     getCompRefIdList, getCompRefs, updateComp, updatePhaseComps, 
     updateRoundComps, updateComps, isNameTaken, getNamesFromPlayerList, 
-    getAllNames, getAffsFromPhaseList, getAffsFromRound, getAffsFromAttList, 
-    getAffsFromPlayerList, getAllAffiliations, updateTiebreakIds, updateId, 
-    updateIdentifierIds, updateIdValIds, updateIdListIds, updateActionIds, 
-    updatePhaseIds, updateRoundIds, updateIds, preCompile
+    getAllNames, getAffsFromPhaseList, getAffsFromAction, getAffsFromRound, 
+    getAffsFromTiebreaker, getAffsFromAttList, getAffsFromPlayerList, 
+    getAllAffiliations, updateTiebreakIds, updateId, updateIdentifierIds, 
+    updateIdValIds, updateIdListIds, updateActionIds, updatePhaseIds, 
+    updateRoundIds, updateIds, preCompile
 ) where
 
 import AST
-import Data.List (nub)
+import Data.List (nub, find)
+import Control.Monad.Reader
 
 -- | Updates a Game AST to prepare it for further compilation by applying all modifiers to rounds, updating Placed competitions with information regarding whether the winner or loser must be known, and updating name Identifiers to be affiliation names where appropriate.
 preCompile :: Game -> Game
@@ -24,7 +26,7 @@ preCompile g = (updateIds . updateComps . applyModifiers) g
 
 -- | Applies the modifiers to each round in a game, returning a game with no modifiers
 applyModifiers :: Game -> Game
-applyModifiers (G p rs wc) = G p (remove0Rounds$ concat $ map (applyRoundModifiers 0 . return) rs) wc
+applyModifiers (G p rs wc tbs) = G p (remove0Rounds $ concat $ map (applyRoundModifiers 0 . return) rs) wc tbs
 
 -- | Given a list of rounds, finds the round(s) to which each modifier should apply and applies it
 applyRoundModifiers :: Integer -> [Round] -> [Round]
@@ -56,13 +58,24 @@ addPhaseToRound newp tr n (R pl rep (m:ml)) = R (addPhaseToPhaseList pl newp tr 
 
 -- * Functions for updating competitions with more information
 
+-- If the game requires knowing the winner or loser of a particular competition, the generated program needs to request that information from the user, but we don't want the program to request anything that is not needed. That is why we do this.
+
 -- | Updates all Placed competitions in a Game with information about whether winner/loser information is needed
 updateComps :: Game -> Game
-updateComps (G p rs wc) = G p (map updateRoundComps rs) wc
+updateComps (G p rs wc tbs) = G p (runReader (mapM updateRoundComps rs) tbs) wc 
+  (map updateTiebreakerComps tbs)
 
--- | Updates all Placed competitions with information about whether winner/loser information is needed in a given Round
-updateRoundComps :: Round -> Round
-updateRoundComps (R pl n ms) = R (updatePhaseComps pl 1 (getCompRefs pl 0)) n ms 
+-- | Updates all Placed competitions in a given Tiebreaker with information about whether winner/loser information is needed
+updateTiebreakerComps :: Tiebreaker -> Tiebreaker
+updateTiebreakerComps (Tiebreak n (Just (Comp c)) id) = Tiebreak n 
+  (Just (Comp (updateComp c 1 (runReader (getCompRefId id 1 False) [])))) id
+updateTiebreakerComps t = t
+
+-- | Updates all Placed competitions in a given Round with information about whether winner/loser information is needed
+updateRoundComps :: Round -> Reader [Tiebreaker] Round
+updateRoundComps (R pl n ms) = do
+    compinfo <- (getCompRefs pl 0)
+    return $ R (updatePhaseComps pl 1 compinfo) n ms 
 
 -- | Updates all Placed competitions in a list of phases with information from the CompInfo
 updatePhaseComps :: [Phase] -> Integer -> CompInfo -> [Phase]
@@ -83,64 +96,79 @@ updateComp cmp n ci = cmp
 type CompInfo = [(Number, Bool, Bool)]
 
 -- | Extracts competition info from a list of phases
-getCompRefs :: [Phase] -> Number -> CompInfo
-getCompRefs [] _ = []
-getCompRefs ((Act (Comp (Scored _ il))):pl) n = combineCompInfo
+getCompRefs :: [Phase] -> Number -> Reader [Tiebreaker] CompInfo
+getCompRefs [] _ = return []
+getCompRefs ((Act (Comp (Scored _ il))):pl) n = liftM2 combineCompInfo
     (getCompRefIdList il n False) (getCompRefs pl (n+1))
-getCompRefs ((Act (Comp (Placed _ il _ _))):pl) n = combineCompInfo
+getCompRefs ((Act (Comp (Placed _ il _ _))):pl) n = liftM2 combineCompInfo
     (getCompRefIdList il n False) (getCompRefs pl (n+1)) 
-getCompRefs ((Act (Dec (Vote il1 il2 _))):pl) n = combineCompInfo
-    (combineCompInfo (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
+getCompRefs ((Act (Dec (Vote il1 il2 _))):pl) n = liftM2 combineCompInfo
+    (liftM2 combineCompInfo 
+        (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
     (getCompRefs pl n)
-getCompRefs ((Act (Dec (Nomination _ il1 il2 _))):pl) n = combineCompInfo
-    (combineCompInfo (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
+getCompRefs ((Act (Dec (Nomination _ il1 il2 _))):pl) n = liftM2 combineCompInfo
+    (liftM2 combineCompInfo 
+        (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
     (getCompRefs pl n)
-getCompRefs ((Act (Dec (Allocation _ il))):pl) n = combineCompInfo  
+getCompRefs ((Act (Dec (Allocation _ il))):pl) n = liftM2 combineCompInfo  
     (getCompRefIdList il n False) (getCompRefs pl n)
-getCompRefs ((Act (Dec (DirectedVote il1 il2 _))):pl) n = combineCompInfo
-    (combineCompInfo (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
+getCompRefs ((Act (Dec (DirectedVote il1 il2 _))):pl) n = liftM2 combineCompInfo
+    (liftM2 combineCompInfo 
+        (getCompRefIdList il1 n False) (getCompRefIdList il2 n False)) 
     (getCompRefs pl n)
-getCompRefs ((Act (Dec (Uses id _ _))):pl) n = combineCompInfo 
+getCompRefs ((Act (Dec (Uses id _ _))):pl) n = liftM2 combineCompInfo 
     (getCompRefId id n False) (getCompRefs pl n)
-getCompRefs ((Prog (AU _ il)):pl) n = combineCompInfo (getCompRefIdList il n False) 
-    (getCompRefs pl n)
-getCompRefs ((Prog (CU _ il)):pl) n = combineCompInfo (getCompRefIdList il n False) 
-    (getCompRefs pl n)
+getCompRefs ((Prog (AU _ il)):pl) n = liftM2 combineCompInfo 
+    (getCompRefIdList il n False) (getCompRefs pl n)
+getCompRefs ((Prog (CU _ il)):pl) n = liftM2 combineCompInfo 
+    (getCompRefIdList il n False) (getCompRefs pl n)
 
 -- | Extracts CompInfo from the include and exclude lists of an IdList and combines the CompInfos into a single CompInfo. The boolean argument, if true, signifies that the IdentifierList comes from within a Tiebreaker
-getCompRefIdList :: IdentifierList -> Number -> Bool -> CompInfo
-getCompRefIdList (IdList idvl il) n t = combineCompInfo (getCompRefIdVals idvl n t) (getCompRefIdentifiers il n t)
+getCompRefIdList :: IdentifierList -> Number -> Bool -> Reader [Tiebreaker] CompInfo
+getCompRefIdList (IdList idvl il) n t = liftM2 combineCompInfo (getCompRefIdVals idvl n t) (getCompRefIdentifiers il n t)
 
 -- | Looks through a list of IdentifierVals for references to competition winners or losers, and stores the info in a CompInfo. The boolean argument, if true, signifies that the IdentifierVal list comes from within a Tiebreaker
-getCompRefIdVals :: [IdentifierVal] -> Number -> Bool -> CompInfo
-getCompRefIdVals [] n t = []
-getCompRefIdVals ((IdVal id _):il) n t = combineCompInfo (getCompRefId id n t) (getCompRefIdVals il n t)
+getCompRefIdVals :: [IdentifierVal] -> Number -> Bool -> Reader [Tiebreaker] CompInfo
+getCompRefIdVals [] n t = return []
+getCompRefIdVals ((IdVal id _):il) n t = liftM2 combineCompInfo (getCompRefId id n t) (getCompRefIdVals il n t)
 
 -- | Looks through a list of identifiers for references to competition winners or losers, and stores the info in a CompInfo. The boolean argument, if true, signifies that the Identifier list comes from within a Tiebreaker
-getCompRefIdentifiers :: [Identifier] -> Number -> Bool -> CompInfo
-getCompRefIdentifiers [] n t = []
-getCompRefIdentifiers (id:ids) n t = combineCompInfo (getCompRefId id n t) (getCompRefIdentifiers ids n t)
+getCompRefIdentifiers :: [Identifier] -> Number -> Bool -> Reader [Tiebreaker] CompInfo
+getCompRefIdentifiers [] n t = return []
+getCompRefIdentifiers (id:ids) n t = liftM2 combineCompInfo (getCompRefId id n t) (getCompRefIdentifiers ids n t)
 
--- | Extracts references to competition winners or losers from identifiers and stores the info in a. The boolean argument, if true, signifies that the Identifier comes from within a Tiebreaker
-getCompRefId :: Identifier -> Number -> Bool -> CompInfo
-getCompRefId (Winner (CRef num)) n t = if not (t && num == 0)
+-- Currently tiebreakers must refer to competitions by the absolute index (i.e. can't use 0 as the index) unless the tiebreaker itself includes a competition, in which case that competition can be referenced by 0.
+
+-- | Extracts references to competition winners or losers from identifiers and stores the info in a CompInfo. The boolean argument, if true, signifies that the Identifier should be ignored (i.e. if it comes from a tiebreaker but we are getting compinfo for non-tiebreaker competitions). Current
+getCompRefId :: Identifier -> Number -> Bool -> Reader [Tiebreaker] CompInfo
+getCompRefId (Winner (CRef num)) n t = return $ if not (t && num == 0)
     then [(compnum, True, False)]
     else []
         where compnum = if num == 0 then n else num
-getCompRefId (Loser (CRef num)) n t = if not (t && num == 0) 
+getCompRefId (Loser (CRef num)) n t = return $ if not (t && num == 0) 
     then [(compnum, False, True)]
     else []
         where compnum = if num == 0 then n else num
 getCompRefId (Chance _ il) n t = getCompRefIdList il n t
-getCompRefId (Majority _ (Just (Tiebreak _ _ id))) n t = getCompRefId id n True
-getCompRefId (Minority _ (Just (Tiebreak _ _ id))) n t = getCompRefId id n True
+getCompRefId (Majority _ (Just (TieRef nm))) n t = do
+    tbs <- ask
+    let (Tiebreak _ _ id) = getTiebreakerByName nm tbs 
+    getCompRefId id n True
+getCompRefId (Minority _ (Just (TieRef nm))) n t = do
+    tbs <- ask
+    let (Tiebreak _ _ id) = getTiebreakerByName nm tbs
+    getCompRefId id n True
 getCompRefId (Most _ il Nothing) n t = getCompRefIdList il n t
-getCompRefId (Most _ il (Just (Tiebreak _ _ id))) n t = combineCompInfo 
-    (getCompRefIdList il n t) (getCompRefId id n True)
+getCompRefId (Most _ il (Just (TieRef nm))) n t = do
+    tbs <- ask
+    let (Tiebreak _ _ id) = getTiebreakerByName nm tbs
+    liftM2 combineCompInfo (getCompRefIdList il n t) (getCompRefId id n True)
 getCompRefId (Least _ il Nothing) n t = getCompRefIdList il n t
-getCompRefId (Least _ il (Just (Tiebreak _ _ id))) n t = combineCompInfo 
-    (getCompRefIdList il n t) (getCompRefId id n True)
-getCompRefId id n t = []
+getCompRefId (Least _ il (Just (TieRef nm))) n t = do
+    tbs <- ask
+    let (Tiebreak _ _ id) = getTiebreakerByName nm tbs
+    liftM2 combineCompInfo (getCompRefIdList il n t) (getCompRefId id n True)
+getCompRefId id n t = return []
 
 -- | Combines two CompInfos by updating one CompInfo with each element from the other CompInfo
 combineCompInfo :: CompInfo -> CompInfo -> CompInfo
@@ -156,12 +184,13 @@ updateCompInfo (ci@(num, wn, ln):cis) ci2@(n, wn2, ln2) = if num == n
 
 -- * Functions for updating and checking Identifiers
 
+-- During parsing, all names are parsed into an N. If the name matches an affiliation name, it should be an A node, however this is not knowable during parsing, so we do it here instead.
+
 -- | Changes identifiers with the N constructor to identifiers with the A constructor if the string matches an affiliation and not a player name
 updateIds :: Game -> Game
-updateIds g@(G pi rl wc) = G pi (map (updateRoundIds playerNames affNames) rl) wc
+updateIds g@(G pi rl wc tbs) = G pi (map (updateRoundIds playerNames affNames) rl) wc (map (updateTiebreakIds playerNames affNames) tbs)
     where playerNames = getAllNames g
           affNames = getAllAffiliations g playerNames
-
 
 -- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for a round
 updateRoundIds :: [Name] -> [Name] -> Round -> Round
@@ -204,12 +233,8 @@ updateId pn an (N nm) = if nm `elem` an
         then N nm 
         else error ("Name " ++ nm ++ " does not match any player or affiliation")
 updateId pn an (Chance num il) = Chance num (updateIdListIds pn an il)
-updateId pn an (Majority vr (Just tb)) = Majority vr (Just (updateTiebreakIds pn an tb))
-updateId pn an (Minority vr (Just tb)) = Minority vr (Just (updateTiebreakIds pn an tb))
-updateId pn an (Most c il Nothing) = Most c (updateIdListIds pn an il) Nothing
-updateId pn an (Most c il (Just tb)) = Most c (updateIdListIds pn an il) (Just (updateTiebreakIds pn an tb))
-updateId pn an (Least c il Nothing) = Least c (updateIdListIds pn an il) Nothing
-updateId pn an (Least c il (Just tb)) = Least c (updateIdListIds pn an il) (Just (updateTiebreakIds pn an tb))
+updateId pn an (Most c il tbr) = Most c (updateIdListIds pn an il) tbr
+updateId pn an (Least c il tbr) = Least c (updateIdListIds pn an il) tbr
 updateId _ _ id = id
 
 -- | Changes N-constructed identifiers to A-constructed identifiers if the name is an affiliation for a Tiebreaker
@@ -219,7 +244,7 @@ updateTiebreakIds pn an (Tiebreak nm (Just a) id) = Tiebreak nm (Just (updateAct
 
 -- | Extracts all player names from a Game
 getAllNames :: Game -> [Name]
-getAllNames (G (PI pl _ _) _ _) = getNamesFromPlayerList pl
+getAllNames (G (PI pl _ _) _ _ _) = getNamesFromPlayerList pl
 
 -- | Extracts player names from a list of Players
 getNamesFromPlayerList :: [Player] -> [Name]
@@ -230,9 +255,9 @@ getNamesFromPlayerList ((P nm atl):pl) = if nm `elem` (getNamesFromPlayerList pl
 
 -- | Extracts all affiliation names from a Game and checks to ensure no affiliation names conflict with player names, which are passed in a Name list
 getAllAffiliations :: Game -> [Name] -> [Name]
-getAllAffiliations (G (PI pl tl _) rl _) pn = if or (map (isNameTaken pn) tl) 
+getAllAffiliations (G (PI pl tl _) rl _ tbs) pn = if or (map (isNameTaken pn) tl) 
     then error "Player and affiliation have same name. Unique names required."
-    else nub $ "nominee" : (getAffsFromPlayerList pl pn ++ tl ++ concat (map ((flip getAffsFromRound) pn) rl))
+    else nub $ "nominee" : (getAffsFromPlayerList pl pn ++ tl ++ concat (map ((flip getAffsFromRound) pn) rl) ++ concatMap ((flip getAffsFromTiebreaker) pn) tbs)
 
 -- | Extracts affiliations from a player list and stores them in a list, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
 getAffsFromPlayerList :: [Player] -> [Name] -> [Name]
@@ -251,6 +276,11 @@ getAffsFromAttList (at:atl) pn = getAffsFromAttList atl pn
 getAffsFromRound :: Round -> [Name] -> [Name]
 getAffsFromRound (R pl _ _) pn = getAffsFromPhaseList pl pn
 
+-- | Extracts affiliations from a tiebreaker, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
+getAffsFromTiebreaker :: Tiebreaker -> [Name] -> [Name]
+getAffsFromTiebreaker (Tiebreak _ (Just a) _) pn = getAffsFromAction a pn
+getAffsFromTiebreaker _ _ = []
+
 -- | Extracts affiliations from a phase list, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
 getAffsFromPhaseList :: [Phase] -> [Name] -> [Name]
 getAffsFromPhaseList [] _ = []
@@ -268,9 +298,15 @@ getAffsFromPhaseList ((Prog (AU (Merge _ nm) _)):pl) pn =
                Just nm -> if isNameTaken pn nm 
                             then error "Player and affiliation have same name. Unique names required."
                             else nm : (getAffsFromPhaseList pl pn)
-getAffsFromPhaseList ((Act (Dec (Uses _ ifpl elsepl))):pl) pn = 
-    getAffsFromPhaseList ifpl pn ++ getAffsFromPhaseList elsepl pn
+getAffsFromPhaseList ((Act ac):pl) pn = getAffsFromAction ac pn 
+    ++ getAffsFromPhaseList pl pn
 getAffsFromPhaseList (p:pl) pn = getAffsFromPhaseList pl pn
+
+-- | Extracts affiliations from an action, checking to ensure that no affiliation names conflict with player names, which are passed in a Name list
+getAffsFromAction :: Action -> [Name] -> [Name]
+getAffsFromAction (Dec (Uses _ ifpl elsepl)) pn = 
+    getAffsFromPhaseList ifpl pn ++ getAffsFromPhaseList elsepl pn
+getAffsFromAction _ _ = []
 
 -- * Helper Functions
 
@@ -283,3 +319,10 @@ remove0Rounds (r:rs) = r : remove0Rounds rs
 -- | Returns true if the given Name is in the given list of Names
 isNameTaken :: [Name] -> Name -> Bool
 isNameTaken nl nm = nm `elem` nl
+
+-- | Looks up a tiebreaker in a list of tiebreakers, by name
+getTiebreakerByName :: Name -> [Tiebreaker] -> Tiebreaker
+getTiebreakerByName n tbs = getTiebreakerByName' $ find ((==n) . getName) tbs
+    where getTiebreakerByName' (Just tb) = tb
+          getTiebreakerByName' Nothing = error $ "Reference to undefined tiebreaker '" ++ n ++ "'"
+          getName (Tiebreak n _ _) = n

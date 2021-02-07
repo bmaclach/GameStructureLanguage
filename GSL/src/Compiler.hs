@@ -7,12 +7,13 @@ module Compiler (
     compileTeam, compileTeams, compilePlayerInfo, compileCompRef,
     compileVoteRef, compileAllocRef, compileValue, compileIdentifier,
     compileIdentifiers, compileIdVal, compileIdVals, compileIdentifierList,
-    compileComp, compileDec, compileAction, compileTiebreaker, compileNameList,
-    compileAffUpdate, compileCounterUpdate, compileProgression, 
-    compilePhaseList, countCompsInPhaseList, countVotesInPhaseList, 
-    countAllocsInPhaseList, compileRoundList, compileGoalList, 
-    compileWinCondition, getCountersFromAttList, getCountersFromPlayerList, 
-    getAllCounters, compileGame
+    compileComp, compileDec, compileAction, compileTiebreaker, 
+    compileTiebreakerRef, compileNameList, compileAffUpdate, 
+    compileCounterUpdate, compileProgression, compilePhaseList, 
+    countCompsInPhaseList, countVotesInPhaseList, countAllocsInPhaseList, 
+    compileRoundList, compileGoalList, compileWinCondition, 
+    getCountersFromAttList, getCountersFromPlayerList, getAllCounters, 
+    compileGame
 ) where
 
 import AST
@@ -24,6 +25,7 @@ import Text.PrettyPrint.HughesPJ (Doc, (<+>), (<>), ($$), braces, brackets,
 
 import Prelude hiding ((<>))
 import Data.List (intersperse, nub)
+import Data.Char (toLower)
 import Control.Monad.Reader
 
 -- | The import of gamelib, which is required in every game
@@ -42,15 +44,16 @@ runRounds = vcat [text "for round in roundList:",
 
 -- | Compiles a Game into python code that will run the game
 compileGame :: Game -> Doc
-compileGame g@(G pi rl wc) = vcat (intersperse (text "") [
+compileGame g@(G pi rl wc tbs) = vcat (intersperse (text "") [
     pyImports,
-    vcat (intersperse (text "") (nub $ snd rldoc ++ snd wcdoc)),
+    vcat (intersperse (text "") (nub $ snd rldoc ++ tbdoc)),
     initGame,
     pidoc,
     fst rldoc,
     runRounds,
-    fst wcdoc])
-    where rldoc = runReader (compileRoundList rl) ids
+    wcdoc])
+    where tbdoc = runReader (mapM (`compileTiebreaker` 1) tbs) ids
+          rldoc = runReader (compileRoundList rl) ids
           pidoc = compilePlayerInfo pi
           wcdoc = runReader (compileWinCondition wc) ids
           ids = IdNames pnames (getAllAffiliations g pnames) (getAllCounters g)
@@ -136,34 +139,34 @@ compileRoundList rl = do
           concatRounds [] _ = return $ (empty, [])
           concatRounds [R pl n ml] num = do
             pldoc <- compilePhaseList pl
-            return $ (brackets (text "roundType" <> integer num) <+> text "*" <+> integer n, [vcat [text "def roundType" <> integer num <> parens empty <> colon, nest 4 (fst pldoc)]] ++ snd pldoc)
+            return $ (brackets (text "roundType" <> integer num) <+> text "*" <+> integer n, [vcat [text "def roundType" <> integer num <> parens empty <> colon, nest 4 pldoc]])
           concatRounds ((R pl n ml):roundl) num = do
             pldoc <- compilePhaseList pl
             rldoc <- concatRounds roundl (num+1)
-            return $ (brackets (text "roundType" <> integer num) <+> text "*" <+> integer n <+> text "+" <+> fst rldoc, [vcat [text "def roundType" <> integer num <> parens empty <> colon, nest 4 (fst pldoc)]] ++ snd rldoc ++ snd pldoc)
+            return $ (brackets (text "roundType" <> integer num) <+> text "*" <+> integer n <+> text "+" <+> fst rldoc, [vcat [text "def roundType" <> integer num <> parens empty <> colon, nest 4 pldoc]] ++ snd rldoc)
 
--- | Compiles a Phase into python code for the action or progression. The list of Docs is for any function definitions that are required.
-compilePhaseList :: [Phase] -> Reader IdNames (Doc, [Doc])
-compilePhaseList [] = return $ (empty, [])
+-- | Compiles a Phase into python code for the action or progression.
+compilePhaseList :: [Phase] -> Reader IdNames Doc
+compilePhaseList [] = return empty
 compilePhaseList ((Act a):pl) = do
     adoc <- compileAction a
     pldoc <- compilePhaseList pl
-    return $ (vcat [fst adoc, fst pldoc], snd adoc ++ snd pldoc)
+    return $ vcat [adoc, pldoc]
 compilePhaseList ((Prog p):pl) = do
     pdoc <- compileProgression p
     pldoc <- compilePhaseList pl
-    return $ (vcat [fst pdoc, fst pldoc], snd pdoc ++ snd pldoc)
+    return $ vcat [pdoc, pldoc]
 
--- | Compiles a Progression into python code for updating the affiliation or counter for a given identifier list. The list of Docs is for any function definitions that are required.
-compileProgression :: Progression -> Reader IdNames (Doc, [Doc])
+-- | Compiles a Progression into python code for updating the affiliation or counter for a given identifier list.
+compileProgression :: Progression -> Reader IdNames Doc
 compileProgression (AU au il) = do
     ildoc <- compileIdentifierList il 1
     audoc <- compileAffUpdate au
-    return $ (vcat [fst ildoc, audoc], snd ildoc)
+    return $ vcat [ildoc, audoc]
 compileProgression (CU cu il) = do
     ildoc <- compileIdentifierList il 1
     cudoc <- compileCounterUpdate cu
-    return $ (vcat [fst ildoc, cudoc], snd ildoc)
+    return $ vcat [ildoc, cudoc]
 
 -- | Compiles a CounterUpdate into python code for updating a counter.
 compileCounterUpdate :: CounterUpdate -> Reader IdNames Doc
@@ -220,38 +223,38 @@ compileNameList nms = brackets $ compileNames nms
           compileNames [x] = doubleQuotes $ text x
           compileNames (x:xs) = doubleQuotes (text x) <> comma <+> compileNames xs
 
--- | Compiles an Action into the corresponding Competition or Decision python code. The list of Docs is for any function definitions that are required.
-compileAction :: Action -> Reader IdNames (Doc, [Doc])
+-- | Compiles an Action into the corresponding Competition or Decision python code.
+compileAction :: Action -> Reader IdNames Doc
 compileAction (Comp c) = compileComp c
 compileAction (Dec d) = compileDec d
 
--- | Compiles a Decision into a call to a python function for getting the decision results. The list of Docs is for any function definitions that are required.
-compileDec :: Decision -> Reader IdNames (Doc, [Doc])
+-- | Compiles a Decision into a call to a python function for getting the decision results.
+compileDec :: Decision -> Reader IdNames Doc
 compileDec (Vote voterl voteel sv) = do
     voterList <- compileIdentifierList voterl 1
     voteeList <- compileIdentifierList voteel 1
-    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "game.vote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
+    return $ vcat [voterList, text "voterList = idList1", voteeList, text "voteeList = idList1", text "game.vote" <> parens (text "voterList, voteeList," <+> text (show sv))]
 compileDec (Nomination n nommers pool sv) = do
     nommerList <- compileIdentifierList nommers 1
     poolList <- compileIdentifierList pool 1
-    return (vcat [fst nommerList, text "nommerList = idList1", fst poolList, text "poolList = idList1", text "game.nominate" <> parens (text "nommerList," <+> integer n <> comma <+> text "poolList," <+> text (show sv))], snd nommerList ++ snd poolList)
+    return $ vcat [nommerList, text "nommerList = idList1", poolList, text "poolList = idList1", text "game.nominate" <> parens (text "nommerList," <+> integer n <> comma <+> text "poolList," <+> text (show sv))]
 compileDec (Allocation nm il) = do
     ids <- ask
     ildoc <- compileIdentifierList il 1
     if nm `elem` (counters ids)
-        then return (vcat [fst ildoc, text "game.allocate" <> parens (text "idList1," <+> doubleQuotes (text nm))], snd ildoc)
+        then return $ vcat [ildoc, text "game.allocate" <> parens (text "idList1," <+> doubleQuotes (text nm))]
         else error ("Reference to non-existent counter " ++ nm)
 compileDec (DirectedVote voterl voteel sv) = do
     voterList <- compileIdentifierList voterl 1
     voteeList <- compileIdentifierList voteel 1
-    return $ (vcat [fst voterList, text "voterList = idList1", fst voteeList, text "voteeList = idList1", text "game.directedVote" <> parens (text "voterList, voteeList," <+> text (show sv))], snd voterList ++ snd voteeList)
+    return $ vcat [voterList, text "voterList = idList1", voteeList, text "voteeList = idList1", text "game.directedVote" <> parens (text "voterList, voteeList," <+> text (show sv))]
 compileDec (Uses id yespl nopl) = do
     iddoc <- compileIdentifier id 1
     yesdoc <- compilePhaseList yespl
     nodoc <- compilePhaseList nopl
     if nopl == []
-        then return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon, nest 4 (fst yesdoc), nest 4 (delComps (countCompsInPhaseList yespl)), nest 4 (delVotes (countVotesInPhaseList yespl)), nest 4 (delAllocs (countAllocsInPhaseList yespl))], snd iddoc ++ snd yesdoc)
-        else return $ (vcat [fst iddoc, text "if uses" <> parens (text "ident") <> colon,nest 4 (fst yesdoc), nest 4 (delComps (countCompsInPhaseList yespl)), nest 4 (delVotes (countVotesInPhaseList yespl)), nest 4 (delAllocs (countAllocsInPhaseList yespl)), text "else:", nest 4 (fst nodoc), nest 4 (delComps (countCompsInPhaseList nopl)), nest 4 (delVotes (countVotesInPhaseList nopl)), nest 4 (delAllocs (countAllocsInPhaseList nopl))], snd iddoc ++ snd yesdoc ++ snd nodoc) 
+        then return $ vcat [iddoc, text "if uses" <> parens (text "ident") <> colon, nest 4 yesdoc, nest 4 (delComps (countCompsInPhaseList yespl)), nest 4 (delVotes (countVotesInPhaseList yespl)), nest 4 (delAllocs (countAllocsInPhaseList yespl))]
+        else return $ vcat [iddoc, text "if uses" <> parens (text "ident") <> colon,nest 4 yesdoc, nest 4 (delComps (countCompsInPhaseList yespl)), nest 4 (delVotes (countVotesInPhaseList yespl)), nest 4 (delAllocs (countAllocsInPhaseList yespl)), text "else:", nest 4 nodoc, nest 4 (delComps (countCompsInPhaseList nopl)), nest 4 (delVotes (countVotesInPhaseList nopl)), nest 4 (delAllocs (countAllocsInPhaseList nopl))]
         where delComps 0 = empty
               delComps n = text "game.compResults = game.compResults" <> brackets (text "0:len(game.compResults)-" <> integer n)
               delVotes 0 = empty
@@ -259,138 +262,144 @@ compileDec (Uses id yespl nopl) = do
               delAllocs 0 = empty
               delAllocs n = text "game.allocateResults = game.allocateResults" <> brackets (text "0:len(game.allocateResults)-" <> integer n)
 
--- | Compiles a Competition into a call to a python function for getting the competition results. The list of Docs is for any function definitions that are required.
-compileComp :: Competition -> Reader IdNames (Doc, [Doc])
+-- | Compiles a Competition into a call to a python function for getting the competition results.
+compileComp :: Competition -> Reader IdNames Doc
 compileComp (Scored Team il) = do
     ildoc <- compileIdentifierList il 1
-    return $ (vcat [fst ildoc, text "game.getScoredTeamCompResults" <> parens (text "list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))))], snd ildoc)
+    return $ vcat [ildoc, text "game.getScoredTeamCompResults" <> parens (text "list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))))]
 compileComp (Scored Individual il) = do
     ildoc <- compileIdentifierList il 1
-    return $ (vcat [fst ildoc, text "game.getScoredCompResults" <> parens (text "idList1")], snd ildoc)
+    return $ vcat [ildoc, text "game.getScoredCompResults" <> parens (text "idList1")]
 compileComp (Placed Team il wn ln) = do
     ildoc <- compileIdentifierList il 1
-    return $ (vcat [fst ildoc, text "game.getTeamCompResults" <> parens (text "list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))) <> comma <+> text (show wn) <> comma <+> text (show ln))], snd ildoc)
+    return $ vcat [ildoc, text "game.getTeamCompResults" <> parens (text "list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))) <> comma <+> text (show wn) <> comma <+> text (show ln))]
 compileComp (Placed Individual il wn ln) = do
     ildoc <- compileIdentifierList il 1
-    return $ (vcat [fst ildoc, text "game.getCompResults" <> parens (text "idList1" <> comma <+> text (show wn) <> comma <+> text (show ln))], snd ildoc)    
+    return $ vcat [ildoc, text "game.getCompResults" <> parens (text "idList1" <> comma <+> text (show wn) <> comma <+> text (show ln))]
 
--- | Compiles an IdentifierList into a python list containing the desired player(s) by filtering out the excludeList from the includeList. The integer input represents the level of nesting, needed to generate unique variable names. The list of Docs is for any function definitions that are required
-compileIdentifierList :: IdentifierList -> Integer -> Reader IdNames (Doc, [Doc])
+-- | Compiles an IdentifierList into a python list containing the desired player(s) by filtering out the excludeList from the includeList. The integer input represents the level of nesting, needed to generate unique variable names.
+compileIdentifierList :: IdentifierList -> Integer -> Reader IdNames Doc
 compileIdentifierList (IdList il el) n = do
     inclList <- compileIdVals il n
     exclList <- compileIdentifiers el n
-    return $ (vcat [fst inclList, fst exclList, text "idList" <> integer n <+> equals <+> brackets (text "x for x in includeList" <> integer n <+> text "if x not in excludeList" <> integer n)], snd inclList ++ snd exclList)
+    return $ vcat [inclList, exclList, text "idList" <> integer n <+> equals <+> brackets (text "x for x in includeList" <> integer n <+> text "if x not in excludeList" <> integer n)]
 
--- | Compiles a list of IdentifierVals into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
-compileIdVals :: [IdentifierVal] -> Integer -> Reader IdNames (Doc, [Doc])
+-- | Compiles a list of IdentifierVals into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names.
+compileIdVals :: [IdentifierVal] -> Integer -> Reader IdNames Doc
 compileIdVals idv n = do
     inclList <- concatIdVals idv n
-    return $ (vcat [text "includeList" <> integer n <+> equals <+> brackets empty,
-              fst inclList], snd inclList)
-        where concatIdVals :: [IdentifierVal] -> Integer -> Reader IdNames (Doc, [Doc])
-              concatIdVals [] n = return (empty, [])
+    return $ vcat 
+        [text "includeList" <> integer n <+> equals <+> brackets empty,
+        inclList]
+        where concatIdVals :: [IdentifierVal] -> Integer -> Reader IdNames Doc
+              concatIdVals [] n = return empty
               concatIdVals (iv:ivs) n = do
                 ivdoc <- compileIdVal iv n
                 ivsdoc <- concatIdVals ivs n
-                return $ (vcat [fst ivdoc, text "includeList" <> integer n <+> text "+= idVal", fst ivsdoc], snd ivdoc ++ snd ivsdoc)
+                return $ vcat [ivdoc, text "includeList" <> integer n <+> text "+= idVal", ivsdoc]
 
--- | Compiles an IdentifierVal into python code that returns a list containing the Identifier repeated Value times. The integer input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
-compileIdVal :: IdentifierVal -> Integer -> Reader IdNames (Doc, [Doc])
+-- | Compiles an IdentifierVal into python code that returns a list containing the Identifier repeated Value times. The integer input represents the level of nesting, needed to generate unique variable names. 
+compileIdVal :: IdentifierVal -> Integer -> Reader IdNames Doc
 compileIdVal (IdVal id (Num 1)) n = do
     iddoc <- compileIdentifier id n
-    return $ (vcat [fst iddoc, text "idVal = ident"], snd iddoc)
+    return $ vcat [iddoc, text "idVal = ident"]
 compileIdVal (IdVal id v) n = do
     iddoc <- compileIdentifier id n
     vdoc <- compileValue v
-    return $ (vcat [
-        fst iddoc,
+    return $ vcat [
+        iddoc,
         text "idVal" <+> equals <+> brackets empty,
-        text "for player in ident" <> colon <+> text "idVal +=" <+> brackets (text "player") <+> text "*" <+> vdoc], snd iddoc)
+        text "for player in ident" <> colon <+> text "idVal +=" <+> brackets (text "player") <+> text "*" <+> vdoc]
 
--- | Compiles a list of Identifiers into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
-compileIdentifiers :: [Identifier] -> Integer -> Reader IdNames (Doc, [Doc])
+-- | Compiles a list of Identifiers into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names. 
+compileIdentifiers :: [Identifier] -> Integer -> Reader IdNames Doc
 compileIdentifiers il n = do
     exclList <- concatIds il n
-    return $ (vcat [text "excludeList" <> integer n <+> equals <+> brackets empty, fst exclList], snd exclList)
-        where concatIds :: [Identifier] -> Integer -> Reader IdNames (Doc, [Doc])
-              concatIds [] n = return $ (empty, [])
+    return $ vcat [text "excludeList" <> integer n <+> equals <+> brackets empty, exclList]
+        where concatIds :: [Identifier] -> Integer -> Reader IdNames Doc
+              concatIds [] n = return empty
               concatIds (id:idl) n = do
                 iddoc <- compileIdentifier id n
                 idldoc <- concatIds idl n
-                return $ (vcat [fst iddoc, text "excludeList" <> integer n <+> text "+= ident", fst idldoc], snd iddoc ++ snd idldoc)
+                return $ vcat [iddoc, text "excludeList" <> integer n <+> text "+= ident", idldoc]
 
--- | Compiles an Identifier into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names. The returned list of Docs is for any function definitions that are required
-compileIdentifier :: Identifier -> Integer -> Reader IdNames (Doc, [Doc])
-compileIdentifier Everyone _ = return $ (text "ident = game.playerList", [])
+-- | Compiles an Identifier into python code that returns the desired player(s). The integer input represents the level of nesting, needed to generate unique variable names. 
+compileIdentifier :: Identifier -> Integer -> Reader IdNames Doc
+compileIdentifier Everyone _ = return $ text "ident = game.playerList"
 compileIdentifier (Chance num il) n = do
     ildoc <- compileIdentifierList il (n+1)
-    return $ (vcat [fst ildoc, text "ident =" <+> text "randomDraw" <> parens (integer num <> comma <+> text "idList" <> integer (n+1))], snd ildoc)
-compileIdentifier Nominated _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text "nominee") <+> text "in x.affiliations"), [])
-compileIdentifier Tied _ = return $ (text "ident = tied", [])
-compileIdentifier Eliminated _ = return $ (text "ident = eliminated", [])
+    return $ vcat [ildoc, text "ident =" <+> text "randomDraw" <> parens (integer num <> comma <+> text "idList" <> integer (n+1))]
+compileIdentifier Nominated _ = return $ text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text "nominee") <+> text "in x.affiliations")
+compileIdentifier Tied _ = return $ text "ident = tied"
+compileIdentifier Eliminated _ = return $ text "ident = eliminated"
 compileIdentifier (N nm) _ = do
     ids <- ask
     if nm `elem` (players ids)
-        then return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x.name ==" <+> doubleQuotes (text nm)), [])
+        then return $ text "ident =" <+> brackets (text "x for x in game.playerList if x.name ==" <+> doubleQuotes (text nm))
         else error ("Reference to non-existent player" ++ nm) 
 compileIdentifier (A af) _ = do
     ids <- ask 
     if af `elem` (affs ids)
-        then return $ (text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text af) <+> text "in x.affiliations"), [])
+        then return $ text "ident =" <+> brackets (text "x for x in game.playerList if" <+> doubleQuotes (text af) <+> text "in x.affiliations")
         else error ("Reference to non-existent affiliation" ++ af)
-compileIdentifier (Winner cr) _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations"), [])
-compileIdentifier (Loser cr) _ = return $ (text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations"), [])
-compileIdentifier (Majority vr Nothing) _ = return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True")), [])
+compileIdentifier (Winner cr) _ = return $ text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "winner")) <+> text "in x.affiliations")
+compileIdentifier (Loser cr) _ = return $ text "ident =" <+> brackets (text "x for x in game.playerList if x ==" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "or" <+> compileCompRef cr <> brackets (doubleQuotes (text "loser")) <+> text "in x.affiliations")
+compileIdentifier (Majority vr Nothing) _ = return $ text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True"))
 compileIdentifier (Majority vr (Just tb)) n = do
-    tbdoc <- compileTiebreaker tb n
-    return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> fst tbdoc)), snd tbdoc)
-compileIdentifier (Minority vr Nothing) _ = return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False")), [])
+    let tbdoc = compileTiebreakerRef tb
+    return $ text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "True" <> comma <+> tbdoc))
+compileIdentifier (Minority vr Nothing) _ = return $ text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False"))
 compileIdentifier (Minority vr (Just tb)) n = do
-    tbdoc <- compileTiebreaker tb n
-    return $ (text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> fst tbdoc)), snd tbdoc)
+    let tbdoc = compileTiebreakerRef tb
+    return $ text "ident =" <+> brackets (text "getVoteMinOrMax" <> parens (compileVoteRef vr <> comma <+> text "False" <> comma <+> tbdoc))
 compileIdentifier (Most nm il Nothing) n = do
     ids <- ask
     ildoc <- compileIdentifierList il (n+1)
     if nm `elem` (counters ids) 
-        then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "True"))], snd ildoc)
+        then return $ vcat [ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "True"))]
         else error ("Reference to non-existent counter " ++ nm)
 compileIdentifier (Most nm il (Just tb)) n = do
     ids <- ask
     ildoc <- compileIdentifierList il (n+1)
-    tbdoc <- compileTiebreaker tb n
+    let tbdoc = compileTiebreakerRef tb
     if nm `elem` (counters ids) 
-        then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "True" <> comma <+> fst tbdoc))], snd ildoc ++ snd tbdoc)
+        then return $ vcat [ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "True" <> comma <+> tbdoc))]
         else error ("Reference to non-existent counter " ++ nm)
 compileIdentifier (Least nm il Nothing) n = do
     ids <- ask
     ildoc <- compileIdentifierList il (n+1)
     if nm `elem` (counters ids) 
-        then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "False"))], snd ildoc)
+        then return $ vcat [ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "False"))]
         else error ("Reference to non-existent counter " ++ nm)
 compileIdentifier (Least nm il (Just tb)) n = do
     ids <- ask
     ildoc <- compileIdentifierList il (n+1)
-    tbdoc <- compileTiebreaker tb n
+    let tbdoc = compileTiebreakerRef tb
     if nm `elem` (counters ids) 
-        then return $ (vcat [fst ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "False" <> comma <+> fst tbdoc))], snd ildoc ++ snd tbdoc)
+        then return $ vcat [ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "False" <> comma <+> tbdoc))]
         else error ("Reference to non-existent counter " ++ nm)
 
+-- TODO: Is integer argument below really necessary?
 
--- | Compiles a Tiebreaker into python code for the name of a function (the first Doc in the output) and the definition of that function (the second Doc in the output). The integer input represents the level of nesting, needed to generate unique variable names.
-compileTiebreaker :: Tiebreaker -> Integer -> Reader IdNames (Doc, [Doc])
-compileTiebreaker (Tiebreak nm Nothing id) n = do
+-- | Compiles a Tiebreaker into python code for the definition of that function. The integer input represents the level of nesting, needed to generate unique variable names.
+compileTiebreaker :: Tiebreaker -> Integer -> Reader IdNames Doc
+compileTiebreaker (Tiebreak (firstletter:nm) Nothing id) n = do
     iddoc <- compileIdentifier id n
-    return $ (text nm <> text "Tiebreaker", [vcat [text "def" <+> text nm <> text "Tiebreaker" <> parens (text "tied") <> colon, nest 4 (fst iddoc), nest 4 (text "return ident[0]")]] ++ snd iddoc)
-compileTiebreaker (Tiebreak nm (Just a) id) n = do
+    return $ vcat [text "def" <+> text (toLower firstletter:nm) <> text "Tiebreaker" <> parens (text "tied") <> colon, nest 4 iddoc, nest 4 (text "return ident[0]")]
+compileTiebreaker (Tiebreak (firstletter:nm) (Just a) id) n = do
     iddoc <- compileIdentifier id n
     adoc <- compileAction a
-    return $ (text nm <> text "Tiebreaker", [vcat [text "def" <+> text nm <> text "Tiebreaker" <> parens (text "tied") <> colon, nest 4 (fst adoc), nest 4 (fst iddoc), nest 4 (delResultIfNeeded a), nest 4 (text "return ident[0]")]] ++ snd iddoc ++ snd adoc)
+    return $ vcat [text "def" <+> text (toLower firstletter:nm) <> text "Tiebreaker" <> parens (text "tied") <> colon, nest 4 adoc, nest 4 iddoc, nest 4 (delResultIfNeeded a), nest 4 (text "return ident[0]")]
     where delResultIfNeeded (Comp _) = text "del game.compResults[-1]"
           delResultIfNeeded (Dec (Vote _ _ _)) = text "del game.voteResults[-1]"
           delResultIfNeeded (Dec (DirectedVote _ _ _)) = text "del game.voteResults[-1]"
           delResultIfNeeded (Dec (Allocation _ _)) = text "del game.allocateResults[-1]"
           delResultIfNeeded ac = empty
+compileTiebreaker _ _ = error "Tiebreaker must have a name"
 
+-- | Compiles a TiebreakerRef into python code for the name of the function that performs the tiebreaker.
+compileTiebreakerRef :: TiebreakerRef -> Doc
+compileTiebreakerRef (TieRef (firstletter:n)) = text (toLower firstletter:n) <> text "Tiebreaker"
 
 -- | Compiles a Value into python code that returns the desired numeric value
 compileValue :: Value -> Reader IdNames Doc
@@ -418,28 +427,28 @@ compileAllocRef (ARef num) = text "game.allocateResults" <> brackets (integer (n
 
 -- * Compiling Win Conditions
 
--- | Compiles a win condition into python code that will find and print out the winner(s). The returned list of Docs is for any function definitions that are required
-compileWinCondition :: WinCondition -> Reader IdNames (Doc, [Doc])
-compileWinCondition Survive = return $ (vcat [text "winners =" <+> doubleQuotes empty,
+-- | Compiles a win condition into python code that will find and print out the winner(s).
+compileWinCondition :: WinCondition -> Reader IdNames Doc
+compileWinCondition Survive = return $ vcat [text "winners =" <+> doubleQuotes empty,
     text "if len(game.playerList) == 1:",
     nest 4 (text "winners = game.playerList[0].name"),
     text "else:",
     nest 4 (text "for player in game.playerList[1:]:"),
     nest 8 (text "winners += player.name +" <+> doubleQuotes (comma <> space)),
     nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ game.playerList[0].name"),
-    text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], [])
-compileWinCondition (Jury num) = return $ (vcat [text "game.juryVote" <> parens (integer num), text "winner = getVoteMinOrMax(game.voteResults[-1], True)", text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))], [])
-compileWinCondition (FinalComp Team) = return $ (vcat [text "game.getTeamCompResults(game.teamList, True, False)", text "winner = game.compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner +" <+> doubleQuotes (text " won!"))], [])
-compileWinCondition (FinalComp Individual) = return $ (vcat [text "game.getCompResults(game.playerList, True, False)", text "winner = game.compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))], [])
+    text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))]
+compileWinCondition (Jury num) = return $ vcat [text "game.juryVote" <> parens (integer num), text "winner = getVoteMinOrMax(game.voteResults[-1], True)", text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))]
+compileWinCondition (FinalComp Team) = return $ vcat [text "game.getTeamCompResults(game.teamList, True, False)", text "winner = game.compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner +" <+> doubleQuotes (text " won!"))]
+compileWinCondition (FinalComp Individual) = return $ vcat [text "game.getCompResults(game.playerList, True, False)", text "winner = game.compResults[-1]" <> brackets (doubleQuotes (text "winner")), text "print" <> parens (text "winner.name +" <+> doubleQuotes (text " won!"))]
 compileWinCondition (Reach gl Individual) = do
     gldoc <- compileGoalList gl
-    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners.append(player.name)"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winners) == 1:"), nest 12 (text "winnerString = winners[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winners[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winners[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!"))), nest 8 (text "break")], [])
+    return $ vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners.append(player.name)"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winners) == 1:"), nest 12 (text "winnerString = winners[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winners[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winners[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!"))), nest 8 (text "break")]
 compileWinCondition (Reach gl Team) = do
     gldoc <- compileGoalList gl
-    return $ (vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners.append(player)"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winTeams = list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in winners if x in y.affiliations")))), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winTeams) == 1:"), nest 12 (text "winnerString = winTeams[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winTeams[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!"))), nest 8 (text "break")], [])
+    return $ vcat [nest 4 (text "winners = []"), nest 4 (text "for player in game.playerList:"), nest 8 (text "if" <+> gldoc <> colon), nest 12 (text "winners.append(player)"), nest 4 (text "if len(winners) > 0:"), nest 8 (text "winTeams = list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in winners if x in y.affiliations")))), nest 8 (text "winnerString =" <+> doubleQuotes empty), nest 8 (text "if len(winTeams) == 1:"), nest 12 (text "winnerString = winTeams[0]"), nest 8 (text "else:"), nest 12 (text "for winner in winTeams[1:]:"), nest 16 (text "winnerString += winner +" <+> doubleQuotes (comma <> space)), nest 12 (text "winnerString +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"), nest 8 (text "print" <> parens (text "winnerString +" <+> doubleQuotes (text " won!"))), nest 8 (text "break")]
 compileWinCondition (Ids il Individual) = do
     ildoc <- compileIdentifierList il 1
-    return $ (vcat [fst ildoc, text "winners =" <+> doubleQuotes empty,
+    return $ vcat [ildoc, text "winners =" <+> doubleQuotes empty,
         text "if len(idList1) == 0: print(\"No winners!\")",
         text "elif len(idList1) == 1:",
         nest 4 (text "winners = idList1[0].name"),
@@ -447,10 +456,10 @@ compileWinCondition (Ids il Individual) = do
         nest 4 (text "for winner in idList1[1:]:"),
         nest 8 (text "winners += winner.name +" <+> doubleQuotes (comma <> space)),
         nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ idList1[0].name"),
-        text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], snd ildoc)
+        text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))]
 compileWinCondition (Ids il Team) = do
     ildoc <- compileIdentifierList il 1
-    return $ (vcat [fst ildoc, 
+    return $ vcat [ildoc, 
         text "winTeams = list" <> parens (text "dict.fromkeys" <> parens (brackets (text "x for x in game.teamList for y in idList1 if x in y.affiliations"))),
         text "winners =" <+> doubleQuotes empty,
         text "if len(winTeams) == 0: print(\"No winners!\")",
@@ -460,7 +469,7 @@ compileWinCondition (Ids il Team) = do
         nest 4 (text "for winner in winTeams[1:]:"),
         nest 8 (text "winners += winner +" <+> doubleQuotes (comma <> space)),
         nest 4 (text "winners +=" <+> doubleQuotes (text "and ") <+> text "+ winTeams[0]"),
-        text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))], snd ildoc)
+        text "print" <> parens (text "winners +" <+> doubleQuotes (text " won!"))]
 
 -- | Compiles a list of goals into a predicate in python that checks whether a player has met those goals.
 compileGoalList :: [Goal] -> Reader IdNames Doc
@@ -500,7 +509,7 @@ countAllocsInPhaseList (p:pl) = 0 + countAllocsInPhaseList pl
 
 -- | Extracts all counter names from a Game
 getAllCounters :: Game -> [Name]
-getAllCounters (G (PI pl _ _) _ _) = getCountersFromPlayerList pl
+getAllCounters (G (PI pl _ _) _ _ _) = getCountersFromPlayerList pl
 
 -- | Extract all counter names from a list of Players
 getCountersFromPlayerList :: [Player] -> [Name]

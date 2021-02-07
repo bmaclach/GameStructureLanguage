@@ -8,9 +8,10 @@ module Parser (
     affiliation, counter, roundReference, phaseReference, timeReference,
     compReference, voteReference, allocateReference, actReference, value,
     identifierList, idValList, idList, identifierVal, identifierP, competitor,
-    competition, selfInclude, decision, action, tiebreaker, counterUpdate, 
-    affiliationUpdate, progression, phase, phaseList, modifier, modifierList,
-    round, roundList, goal, goalList, winCondition, game
+    competition, selfInclude, decision, action, tiebreaker, 
+    tiebreakerReference, counterUpdate, affiliationUpdate, progression, phase, 
+    phaseList, modifier, modifierList, round, roundList, goal, goalList, 
+    winCondition, game
 ) where
 
 import Text.Parsec
@@ -37,8 +38,8 @@ game = do
     reserved "Win"
     colon
     wc <- winCondition
-    eof
-    return $ G pi rl wc
+    tbs <- manyTill tiebreaker eof
+    return $ G pi rl wc tbs
 
 -- * Player-related parsers
 
@@ -130,7 +131,7 @@ counter = do
 -- | Parses a semicolon-separated list of rounds
 roundList = endBy1 round semi
 
--- | Parses a round, which is a phase list, a number of repititions, and maybe some modifiers
+-- | Parses a round, which is a phase list, a number of repetitions, and maybe some modifiers
 round = do
     pl <- phaseList
     (n, ml) <- option (1, []) (do {reserved "repeated"
@@ -327,22 +328,22 @@ identifierP = do {reserved "everyone"
              <|> do {reserved "majority"
                     ; reserved "of"
                     ; vr <- voteReference
-                    ; tb <- optionMaybe tiebreaker
+                    ; tb <- optionMaybe tiebreakerReference
                     ; return $ Majority vr tb}
              <|> do {reserved "minority"
                     ; reserved "of"
                     ; vr <- voteReference
-                    ; tb <- optionMaybe tiebreaker
+                    ; tb <- optionMaybe tiebreakerReference
                     ; return $ Minority vr tb}
              <|> do {(reserved "highest" <|> reserved "most")
                     ; nm <- identifier
                     ; idl <- option (IdList [IdVal Everyone (Num 1)] []) (parens identifierList)
-                    ; tb <- optionMaybe tiebreaker
+                    ; tb <- optionMaybe tiebreakerReference
                     ; return $ Most nm idl tb}
              <|> do {(reserved "lowest" <|> reserved "least")
                     ; nm <- identifier
                     ; idl <- option (IdList [IdVal Everyone (Num 1)] []) (parens identifierList)
-                    ; tb <- optionMaybe tiebreaker
+                    ; tb <- optionMaybe tiebreakerReference
                     ; return $ Least nm idl tb}
 
 
@@ -425,13 +426,19 @@ modifier = do {reserved "just"
 
 -- | Parses tiebreakers
 tiebreaker = do
-    reserved "tiebroken"
-    reserved "by"
-    nm <- identifier
+    reserved "Tiebreaker"
     colon
+    nm <- identifier
     act <- optionMaybe action
     ident <- identifierP
     return $ Tiebreak nm act ident
+
+-- | Parses tiebreaker references
+tiebreakerReference = do
+    reserved "tiebroken"
+    reserved "by"
+    nm <- identifier
+    return $ TieRef nm
 
 -- * Win condition-related parsers
 

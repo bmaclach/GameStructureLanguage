@@ -7,10 +7,14 @@ increase votes by 3 for winner of competition.
 allocation of votes by everyone.
 directed vote by everyone * results of allocation between everyone including self.
 increase position by results of vote for everyone.
-elimination of lowest position (everyone) tiebroken by lowVote:
-    lowest votes (tied) tiebroken by rocks:
-        chance 1 (tied)
+elimination of lowest position (everyone) tiebroken by lowVote
 repeated 9 times;
 
 Win:
 survive
+
+Tiebreaker: lowVote
+lowest votes (tied) tiebroken by rocks
+
+Tiebreaker: rocks
+chance 1 (tied)

@@ -29,8 +29,7 @@ languageDef = emptyDef {
         "preserving", "swap", "adding", "change", "to", "merge", "increase", 
         "decrease", "set", "results", "except", "everyone", "chance", 
         "nominated", "tied", "eliminated", "winner", "loser", "majority", 
-        "minority", "highest", "lowest", "most", "least", "tiebroken", "member",
-        "jury", "survive", "reach"],
+        "minority", "highest", "lowest", "most", "least", "tiebroken", "tiebreaker", "member", "jury", "survive", "reach"],
     T.reservedOpNames = ["*"],
     T.caseSensitive = False
 }

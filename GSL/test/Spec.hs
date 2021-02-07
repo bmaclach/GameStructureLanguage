@@ -19,7 +19,7 @@ exPhase3 = Prog (AU Elimination (IdList [IdVal (N "Test") (Num 1)] []))
 exPhase4 = Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [])))
 
 exGame :: Game
-exGame = G (PI [P "Brooks" [], P "Test" []] [] False) [R [exPhase1, exPhase2] 10 [From 8 Before 1 exPhase3], R [exPhase4, exPhase1] 7 [Jst 4 During 2 exPhase3, From 5 After 1 exPhase2]] Survive
+exGame = G (PI [P "Brooks" [], P "Test" []] [] False) [R [exPhase1, exPhase2] 10 [From 8 Before 1 exPhase3], R [exPhase4, exPhase1] 7 [Jst 4 During 2 exPhase3, From 5 After 1 exPhase2]] Survive []
 
 main :: IO ()
 main = hspec $ do
@@ -214,9 +214,12 @@ main = hspec $ do
                 parseGame action "vote by everyone between everyone" `shouldBe` Dec (Vote (IdList [IdVal Everyone (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False)
         describe "tiebreaker" $ do
             it "parses a tiebreaker with no action" $
-                parseGame tiebreaker "tiebroken by rocks: chance 1 (everyone)" `shouldBe` Tiebreak "rocks" Nothing (Chance 1 (IdList [IdVal Everyone (Num 1)] [])) 
+                parseGame tiebreaker "Tiebreaker: rocks chance 1 (everyone)" `shouldBe` Tiebreak "rocks" Nothing (Chance 1 (IdList [IdVal Everyone (Num 1)] [])) 
             it "parses a tiebreaker with an action" $
-                parseGame tiebreaker "tiebroken by rocks: competition between everyone chance 1 (everyone)" `shouldBe` Tiebreak "rocks" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True))) (Chance 1 (IdList [IdVal Everyone (Num 1)] [])) 
+                parseGame tiebreaker "Tiebreaker: rocks competition between everyone chance 1 (everyone)" `shouldBe` Tiebreak "rocks" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True))) (Chance 1 (IdList [IdVal Everyone (Num 1)] [])) 
+        describe "tiebreakerReference" $ do
+            it "parses a tiebreaker reference" $
+                parseGame tiebreakerReference "tiebroken by rocks" `shouldBe` TieRef "rocks"
         describe "counterUpdate" $ do
             it "parses an increase to a counter" $
                 parseGame counterUpdate "increase votes by 3" `shouldBe` Increase "votes" (Num 3)
@@ -302,8 +305,12 @@ main = hspec $ do
             it "parses identifier list" $
                 parseGame winCondition "highest points (everyone)" `shouldBe` Ids (IdList [IdVal (Most "points" (IdList [IdVal Everyone (Num 1)] []) Nothing) (Num 1)] []) Individual
         describe "game" $ do
-            it "parses a game" $
-                parseGame game "Players: Brooks, Test Rounds: competition between everyone. elimination of Brooks; Win: Survive" `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True)), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []] Survive
+            it "parses a game with no tiebreakers" $
+                parseGame game "Players: Brooks, Test Rounds: competition between everyone. elimination of Brooks; Win: Survive" `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True)), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []] Survive []
+            it "parses a game with 1 tiebreaker" $
+                parseGame game "Players: Brooks, Test Rounds: competition between everyone. elimination of Brooks; Win: Survive Tiebreaker: rocks chance 1 (everyone)" `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True)), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []] Survive [Tiebreak "rocks" Nothing (Chance 1 (IdList [IdVal Everyone (Num 1)] []))]
+            it "parses a game with 2 tiebreakers" $
+                parseGame game "Players: Brooks, Test Rounds: competition between everyone. elimination of Brooks; Win: Survive Tiebreaker: rocks chance 1 (everyone) Tiebreaker: Overtime competition between everyone winner of competition" `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True)), Prog (AU Elimination (IdList [IdVal (N "Brooks") (Num 1)] []))] 1 []] Survive [Tiebreak "rocks" Nothing (Chance 1 (IdList [IdVal Everyone (Num 1)] [])), Tiebreak "Overtime" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True True))) (Winner (CRef 0))]
     describe "PreCompiler" $ do
         describe "remove0Rounds" $ do
             it "removes rounds with 0 repetitions" $
@@ -330,7 +337,7 @@ main = hspec $ do
                 applyRoundModifiers 0 [R [exPhase1, exPhase2, exPhase3] 2 [From 4 During 1 exPhase4], R [exPhase1, exPhase4, exPhase2, exPhase3] 3 [From 4 During 1 exPhase4], R [exPhase1, exPhase2, exPhase3] 2 [From 4 During 1 exPhase4]] `shouldBe` [R [exPhase1, exPhase2, exPhase3] 2 [], R [exPhase1, exPhase4, exPhase2, exPhase3] 1 [], R [exPhase4, exPhase4, exPhase2, exPhase3] 2 [], R [exPhase4, exPhase2, exPhase3] 2 []]
         describe "applyModifiers" $ do
             it "applies all modifiers to all rounds in a game" $
-                applyModifiers exGame `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [exPhase1, exPhase2] 7 [], R [exPhase3, exPhase1, exPhase2] 3 [], R [exPhase4, exPhase1] 3 [], R [exPhase4, exPhase3] 1 [], R [exPhase4, exPhase2, exPhase1] 3 []] Survive
+                applyModifiers exGame `shouldBe` G (PI [P "Brooks" [], P "Test" []] [] False) [R [exPhase1, exPhase2] 7 [], R [exPhase3, exPhase1, exPhase2] 3 [], R [exPhase4, exPhase1] 3 [], R [exPhase4, exPhase3] 1 [], R [exPhase4, exPhase2, exPhase1] 3 []] Survive []
         describe "updateCompInfo" $ do
             it "appends to CompInfo if number not present" $
                 updateCompInfo [(1, False, False), (2, True, False)] (3, True, True) `shouldBe` [(1, False, False), (2, True, False), (3, True,True)]
@@ -344,67 +351,68 @@ main = hspec $ do
             it "returns second list if first is empty" $
                 combineCompInfo [] [(1, True, False), (2, True, False)] `shouldBe` [(1, True, False), (2, True, False)]
         describe "getCompRefId" $ do
+            let runGetCompRefId id n b = runReader (getCompRefId id n b)
             it "adds to CompInfo if winner encountered" $
-                getCompRefId (Winner (CRef 2)) 3 False `shouldBe` [(2, True, False)]
+                runGetCompRefId (Winner (CRef 2)) 3 False [] `shouldBe` [(2, True, False)]
             it "adds to CompInfo if winner encountered with 0 index" $
-                getCompRefId (Winner (CRef 0)) 3 False `shouldBe` [(3, True, False)]
+                runGetCompRefId (Winner (CRef 0)) 3 False [] `shouldBe` [(3, True, False)]
             it "adds to CompInfo if loser encountered" $
-                getCompRefId (Loser (CRef 2)) 3 False `shouldBe` [(2, False, True)]
+                runGetCompRefId (Loser (CRef 2)) 3 False [] `shouldBe` [(2, False, True)]
             it "adds to CompInfo if loser encountered with 0 index" $
-                getCompRefId (Loser (CRef 0)) 3 False `shouldBe` [(3, False, True)]
+                runGetCompRefId (Loser (CRef 0)) 3 False [] `shouldBe` [(3, False, True)]
             it "adds to CompInfo if Chance encountered" $
-                getCompRefId (Chance 1 (IdList [IdVal (Winner (CRef 2)) (Num 1)] [])) 3 False 
+                runGetCompRefId (Chance 1 (IdList [IdVal (Winner (CRef 2)) (Num 1)] [])) 3 False [] 
                     `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Majority encountered with tiebreaker" $
-                getCompRefId (Majority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
+                runGetCompRefId (Majority (VRef 1) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 2))] `shouldBe` [(2, True, False)]
             it "does not add to CompInfo if Majority with tiebreaker with index 0 is encountered" $
-                getCompRefId (Majority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
+                runGetCompRefId (Majority (VRef 1) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 0))] `shouldBe` []
             it "adds to CompInfo if Minority encountered with tiebreaker" $
-                getCompRefId (Minority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 2))))) 3 False `shouldBe` [(2, True, False)]
+                runGetCompRefId (Minority (VRef 1) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 2))] `shouldBe` [(2, True, False)]
             it "does not add to CompInfo if Minority with tiebreaker with index 0 is encountered" $
-                getCompRefId (Minority (VRef 1) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` []
+                runGetCompRefId (Minority (VRef 1) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 0))] `shouldBe` []
             it "adds to CompInfo if Most with no tiebreaker encountered" $
-                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False `shouldBe` [(2, True, False)]
+                runGetCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False [] `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Most with tiebreaker encountered" $
-                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
+                runGetCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 1))] `shouldBe` [(2, True, False), (1, True, False)]
             it "does not add tiebreaker to CompInfo if Most with tiebreaker with index 0 is encountered" $
-                getCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
+                runGetCompRefId (Most "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 0))] `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Least with no tiebreaker encountered" $
-                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False `shouldBe` [(2, True, False)]
+                runGetCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) Nothing) 3 False [] `shouldBe` [(2, True, False)]
             it "adds to CompInfo if Least with tiebreaker encountered" $
-                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 1))))) 3 False `shouldBe` [(2, True, False), (1, True, False)]
+                runGetCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 1))] `shouldBe` [(2, True, False), (1, True, False)]
             it "does not add tiebreaker to CompInfo if Least with tiebreaker with index 0 is encountered" $
-                getCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (Tiebreak "a" Nothing (Winner (CRef 0))))) 3 False `shouldBe` [(2, True, False)]
+                runGetCompRefId (Least "votes" (IdList [IdVal (Winner (CRef 2)) (Num 1)] []) (Just (TieRef "a"))) 3 False [Tiebreak "a" Nothing (Winner (CRef 0))] `shouldBe` [(2, True, False)]
         describe "getCompRefIdentifiers" $
             it "adds info from list of identifiers to CompInfo" $
-                getCompRefIdentifiers [Winner (CRef 2), Everyone, Loser (CRef 2), N "Brooks"] 3 False `shouldBe` [(2, True, True)]
+                runReader (getCompRefIdentifiers [Winner (CRef 2), Everyone, Loser (CRef 2), N "Brooks"] 3 False) [] `shouldBe` [(2, True, True)]
         describe "getCompRefIdVals" $
             it "adds info from list of IdentifierVals to CompInfo" $
-                getCompRefIdVals [IdVal (Winner (CRef 2)) (Num 1), IdVal Everyone (Num 1), IdVal (Loser (CRef 2)) (Num 1), IdVal (N "Brooks") (Num 1)] 3 False `shouldBe` [(2, True, True)]
+                runReader (getCompRefIdVals [IdVal (Winner (CRef 2)) (Num 1), IdVal Everyone (Num 1), IdVal (Loser (CRef 2)) (Num 1), IdVal (N "Brooks") (Num 1)] 3 False) [] `shouldBe` [(2, True, True)]
         describe "getCompRefIdList" $
             it "adds info from IdentifierList to CompInfo" $
-                getCompRefIdList (IdList [IdVal (Winner (CRef 2)) (Num 1), IdVal Everyone (Num 1), IdVal (Loser (CRef 2)) (Num 1), IdVal (N "Brooks") (Num 1)] [Winner (CRef 1), Everyone, Loser (CRef 1), N "Brooks"]) 3 False `shouldBe` [(2, True, True), (1, True, True)]
+                runReader (getCompRefIdList (IdList [IdVal (Winner (CRef 2)) (Num 1), IdVal Everyone (Num 1), IdVal (Loser (CRef 2)) (Num 1), IdVal (N "Brooks") (Num 1)] [Winner (CRef 1), Everyone, Loser (CRef 1), N "Brooks"]) 3 False) [] `shouldBe` [(2, True, True), (1, True, True)]
         describe "getCompRefs" $ do
             it "extracts CompInfo from scored comp" $
-                getCompRefs [Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)])))] 2 `shouldBe` [(1, True, False)]
+                runReader (getCompRefs [Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)])))] 2) [] `shouldBe` [(1, True, False)]
             it "extracts CompInfo from placed comp" $    
-                getCompRefs [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) True True))] 2 `shouldBe` [(1, True, False)]
+                runReader (getCompRefs [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) True True))] 2) [] `shouldBe` [(1, True, False)]
             it "extracts CompInfo from Vote" $
-                getCompRefs [Act (Dec (Vote (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2 `shouldBe` [(1, True, True)]
+                runReader (getCompRefs [Act (Dec (Vote (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2) [] `shouldBe` [(1, True, True)]
             it "extracts CompInfo from Nomination" $
-                getCompRefs [Act (Dec (Nomination 2 (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2 `shouldBe` [(1, True, True)]
+                runReader (getCompRefs [Act (Dec (Nomination 2 (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2) [] `shouldBe` [(1, True, True)]
             it "extracts CompInfo from Allocation" $
-                getCompRefs [Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)])))] 2 `shouldBe` [(1, False, True)]
+                runReader (getCompRefs [Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)])))] 2) [] `shouldBe` [(1, False, True)]
             it "extracts CompInfo from DirectedVote" $
-                getCompRefs [Act (Dec (DirectedVote (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2 `shouldBe` [(1, True, True)]
+                runReader (getCompRefs [Act (Dec (DirectedVote (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]) (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]) False))] 2) [] `shouldBe` [(1, True, True)]
             it "extracts CompInfo from Uses" $
-                getCompRefs [Act (Dec (Uses (Winner (CRef 1)) [] []))] 2 `shouldBe` [(1, True, False)]
+                runReader (getCompRefs [Act (Dec (Uses (Winner (CRef 1)) [] []))] 2) [] `shouldBe` [(1, True, False)]
             it "extracts CompInfo from AffiliationUpdate" $
-                getCompRefs [Prog (AU Elimination (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]))] 2 `shouldBe` [(1, False, True)]
+                runReader (getCompRefs [Prog (AU Elimination (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]))] 2) [] `shouldBe` [(1, False, True)]
             it "extracts CompInfo from CounterUpdate" $
-                getCompRefs [Prog (CU (Increase "votes" (Num 3)) (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]))] 2 `shouldBe` [(1, False, True)]
+                runReader (getCompRefs [Prog (CU (Increase "votes" (Num 3)) (IdList [IdVal Everyone (Num 1)] [Loser (CRef 1)]))] 2) [] `shouldBe` [(1, False, True)]
             it "increases competition counter when scored and placed competitions are encountered" $
-                getCompRefs [Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]))), Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 0)]) True True)), Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [Loser (CRef 0)])))] 1 `shouldBe` [(1, True, False), (2, True, False), (3, False, True)]
+                runReader (getCompRefs [Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 1)]))), Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] [Winner (CRef 0)]) True True)), Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [Loser (CRef 0)])))] 1) [] `shouldBe` [(1, True, False), (2, True, False), (3, False, True)]
         describe "updateComp" $ do
             it "does not change Scored competition" $
                 updateComp (Scored Team (IdList [IdVal Everyone (Num 1)] [])) 1 [(1, True, True)] `shouldBe` (Scored Team (IdList [IdVal Everyone (Num 1)] []))
@@ -417,10 +425,10 @@ main = hspec $ do
                 updatePhaseComps [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True))] 1 [(1, False, True)] `shouldBe` [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) False True)), Act (Comp (Scored Team (IdList [IdVal Everyone (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) False False))]
         describe "updateRoundComps" $ do
             it "updates all Placed competitions in a round" $
-                updateRoundComps (R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) True True))] 5 []) `shouldBe` R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) False False))] 5 []
+                runReader (updateRoundComps (R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) True True))] 5 [])) [] `shouldBe` R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) False False))] 5 []
         describe "updateComps" $ do
             it "updates all Placed competitions in a Game" $
-                updateComps (G (PI [] [] False) [R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) True True))] 5 [], R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 1)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 1)) (Num 1)] []) True True))] 3 []] Survive) `shouldBe` G (PI [] [] False) [R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) False False))] 5 [], R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 1)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 1)) (Num 1)] []) False False))] 3 []] Survive
+                updateComps (G (PI [] [] False) [R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) True True))] 5 [], R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 1)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 1)) (Num 1)] []) True True))] 3 []] Survive [Tiebreak "fire" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) False False))) (Loser (CRef 0))]) `shouldBe` G (PI [] [] False) [R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 0)) (Num 1)] []) False False))] 5 [], R [Act (Comp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True True)), Act (Comp (Scored Team (IdList [IdVal (Winner (CRef 1)) (Num 1)] []))), Act (Comp (Placed Team (IdList [IdVal (Loser (CRef 1)) (Num 1)] []) False False))] 3 []] Survive [Tiebreak "fire" (Just (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) False True))) (Loser (CRef 0))]
         describe "isNameTaken" $ do
             it "returns true if Name is taken" $
                 isNameTaken ["Brooks"] "Brooks" `shouldBe` True
@@ -431,7 +439,7 @@ main = hspec $ do
                 getNamesFromPlayerList [P "Brooks" [], P "Test" []] `shouldBe` ["Brooks", "Test"]
         describe "getAllNames" $ do
             it "returns all player names in a game" $
-                getAllNames (G (PI [P "Brooks" [], P "Test" []] [] False) [] Survive) `shouldBe` ["Brooks", "Test"]
+                getAllNames (G (PI [P "Brooks" [], P "Test" []] [] False) [] Survive []) `shouldBe` ["Brooks", "Test"]
         describe "getAffsFromPhaseList" $ do
             it "returns affiliations introduced in an Add affiliation update" $
                 getAffsFromPhaseList [Prog (AU (Add "Jays") (IdList [] []))] [] `shouldBe` ["Jays"]
@@ -449,6 +457,14 @@ main = hspec $ do
                 getAffsFromPhaseList [Act (Dec (Uses (N "Brooks") [] [Prog (AU (Add "Jays") (IdList [] []))]))] [] `shouldBe` ["Jays"]
             it "returns affiliations from phase lists with multiple entries" $
                 getAffsFromPhaseList [Prog (AU (Add "Jays") (IdList [] [])), Prog (AU (Change "HOH" "houseguest") (IdList [] []))] [] `shouldBe` ["Jays", "houseguest"]
+        describe "getAffsFromAction" $ do
+            it "returns affiliations from the 'then' branch of a Uses" $
+                getAffsFromAction (Dec (Uses (N "Brooks") [Prog (AU (Add "Jays") (IdList [] []))] []))  []`shouldBe` ["Jays"]
+            it "returns affiliations from the 'otherwise' branch of a Uses" $
+                getAffsFromAction (Dec (Uses (N "Brooks") [] [Prog (AU (Add "Jays") (IdList [] []))])) [] `shouldBe` ["Jays"]
+        describe "getAffsFromTiebreaker" $ do
+            it "returns affiliations from a tiebreaker with a uses action" $
+                getAffsFromTiebreaker (Tiebreak "usestie" (Just (Dec (Uses (N "Brooks") [] [Prog (AU (Add "Jays") (IdList [] []))]))) (N "Brooks")) [] `shouldBe` ["Jays"]
         describe "getAffsFromAttList" $ do
             it "does not get names from counters" $
                 getAffsFromAttList [Counter "votes" Nothing Nothing Nothing] [] `shouldBe` []
@@ -463,7 +479,7 @@ main = hspec $ do
                 getAffsFromPlayerList [P "Brooks" [Affiliation "Great"], P "Test" [Affiliation "Boring"]] [] `shouldBe` ["Great", "Boring"]
         describe "getAllAffiliations" $ do
             it "returns all affiliations in a game plus 'nominee'" $
-                getAllAffiliations (G (PI [P "Brooks" [Affiliation "Jays"], P "Test" [Affiliation "Yankees"]] ["Jays", "Yankees"] False) [R [Prog (AU (Add "Kucha") (IdList [] [])), Prog (AU (Add "Jays") (IdList [] []))] 5 []] Survive) [] `shouldBe` ["nominee", "Jays", "Yankees", "Kucha"]
+                getAllAffiliations (G (PI [P "Brooks" [Affiliation "Jays"], P "Test" [Affiliation "Yankees"]] ["Jays", "Yankees"] False) [R [Prog (AU (Add "Kucha") (IdList [] [])), Prog (AU (Add "Jays") (IdList [] []))] 5 []] Survive [Tiebreak "usestie" (Just (Dec (Uses (N "Brooks") [] [Prog (AU (Add "Ogakor") (IdList [] []))]))) (N "Brooks")]) [] `shouldBe` ["nominee", "Jays", "Yankees", "Kucha", "Ogakor"]
         describe "updateTiebreakIds" $ do
             it "changes N to A in tiebreaker with no action" $
                 updateTiebreakIds [] ["Test"] (Tiebreak "a" Nothing (N "Test")) `shouldBe` (Tiebreak "a" Nothing (A "Test"))
@@ -476,18 +492,10 @@ main = hspec $ do
                 updateId ["Test"] [] (N "Test") `shouldBe` (N "Test")
             it "changes an N in a Chance identifier" $
                 updateId [] ["Test"] (Chance 1 (IdList [] [N "Test"])) `shouldBe`(Chance 1 (IdList [] [A "Test"]))
-            it "changes an N in a Majority tiebreaker" $
-                updateId [] ["Test"] (Majority (VRef 1) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Majority (VRef 1) (Just (Tiebreak "a" Nothing (A "Test"))))
-            it "changes an N in a Minority tiebreaker" $
-                updateId [] ["Test"] (Minority (VRef 1) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Minority (VRef 1) (Just (Tiebreak "a" Nothing (A "Test"))))
-            it "changes an N in a Most with no tiebreaker" $
+            it "changes an N in a Most" $
                 updateId [] ["Test"] (Most "votes" (IdList [] [N "Test"]) Nothing) `shouldBe` (Most "votes" (IdList [] [A "Test"]) Nothing)
-            it "changes an N in a Most with a tiebreaker" $
-                updateId [] ["Test"] (Most "votes" (IdList [] [N "Test"]) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Most "votes" (IdList [] [A "Test"]) (Just (Tiebreak "a" Nothing (A "Test"))))
-            it "changes an N in a Most with no tiebreaker" $
+            it "changes an N in a Least" $
                 updateId [] ["Test"] (Least "votes" (IdList [] [N "Test"]) Nothing) `shouldBe` (Least "votes" (IdList [] [A "Test"]) Nothing)
-            it "changes an N in a Most with a tiebreaker" $
-                updateId [] ["Test"] (Least "votes" (IdList [] [N "Test"]) (Just (Tiebreak "a" Nothing (N "Test")))) `shouldBe` (Least "votes" (IdList [] [A "Test"]) (Just (Tiebreak "a" Nothing (A "Test"))))
             it "does not change other identifiers" $
                 updateId [] ["Test"] Everyone `shouldBe` Everyone
         describe "updateIdentifierIds" $ do
@@ -528,10 +536,10 @@ main = hspec $ do
                 updateRoundIds [] ["Test"] (R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 []) `shouldBe` (R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 5 [])
         describe "updateIds" $ do
             it "changes N to A in a Game" $
-                updateIds (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [N "Test"])))] 3 []] Survive) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [A "Test"])))] 3 []] Survive)
+                updateIds (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [N "Test"])))] 3 []] Survive [Tiebreak "a" Nothing (N "Test")]) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 5 [], R [Act (Comp (Scored Team (IdList [] [A "Test"])))] 3 []] Survive [Tiebreak "a" Nothing (A "Test")])
         describe "preCompile" $ do
             it "applies modifiers, updates competitions, and updates ids" $
-                preCompile (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [From 4 Before 2 exPhase1], R [Act (Comp (Placed Team (IdList [] [N "Test"]) True True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 3 [], R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), exPhase1, Prog (AU (Elimination) (IdList [] [A "Test"]))] 2 [], R [Act (Comp (Placed Team (IdList [] [A "Test"]) False True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive)
+                preCompile (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [N "Test"])), Prog (AU (Elimination) (IdList [] [N "Test"]))] 5 [From 4 Before 2 exPhase1], R [Act (Comp (Placed Team (IdList [] [N "Test"]) True True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive [Tiebreak "fire" (Just (Comp (Placed Individual (IdList [IdVal (N "Test") (Num 0)] []) False False))) (Winner (CRef 0))]) `shouldBe` (G (PI [P "Brooks" [Affiliation "Test"]] [] False) [R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), Prog (AU (Elimination) (IdList [] [A "Test"]))] 3 [], R [Prog (CU (Set "votes" (Num 0)) (IdList [] [A "Test"])), exPhase1, Prog (AU (Elimination) (IdList [] [A "Test"]))] 2 [], R [Act (Comp (Placed Team (IdList [] [A "Test"]) False True)), Prog (AU (Elimination) (IdList [] [Loser (CRef 0)]))] 3 []] Survive [Tiebreak "fire" (Just (Comp (Placed Individual (IdList [IdVal (A "Test") (Num 0)] []) True False))) (Winner (CRef 0))])
     describe "Compiler" $ do
         describe "compileAffiliations" $ do
             it "compiles an attribute list into a list of string affiliations" $
@@ -604,97 +612,100 @@ main = hspec $ do
                 runReader (compileValue (Result (Alloc (ARef 0)))) ids `shouldBe` text "game.allocateResults[-1][player]"
         describe "compileIdentifier" $ do
             it "compiles Everyone into the playerList" $
-                runReader (compileIdentifier Everyone 1) ids `shouldBe` (text "ident = game.playerList", [])
+                runReader (compileIdentifier Everyone 1) ids `shouldBe` text "ident = game.playerList"
             it "compiles Chance into a call to randomDraw" $
-                runReader (compileIdentifier (Chance 1 (IdList [IdVal Everyone (Num 2)] [N "Brooks"])) 1) ids `shouldBe` (text "includeList2 = []\nident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2\nincludeList2 += idVal\nexcludeList2 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = randomDraw(1, idList2)", [])
+                runReader (compileIdentifier (Chance 1 (IdList [IdVal Everyone (Num 2)] [N "Brooks"])) 1) ids `shouldBe` text "includeList2 = []\nident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2\nincludeList2 += idVal\nexcludeList2 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = randomDraw(1, idList2)"
             it "compiles Nominated into a list of nominated players" $
-                runReader (compileIdentifier Nominated 1) ids `shouldBe` (text "ident = [x for x in game.playerList if \"nominee\" in x.affiliations]", [])
+                runReader (compileIdentifier Nominated 1) ids `shouldBe` text "ident = [x for x in game.playerList if \"nominee\" in x.affiliations]"
             it "compiles Tied into local variable tied for tiebreaker functions" $
-                runReader (compileIdentifier Tied 1) ids `shouldBe` (text "ident = tied", [])
+                runReader (compileIdentifier Tied 1) ids `shouldBe` text "ident = tied"
             it "compiles Eliminated into the eliminated players list" $
-                runReader (compileIdentifier Eliminated 1) ids `shouldBe` (text "ident = eliminated", [])
+                runReader (compileIdentifier Eliminated 1) ids `shouldBe` text "ident = eliminated"
             it "compiles N into a list containing the named player" $
-                runReader (compileIdentifier (N "Brooks") 1) ids `shouldBe` (text "ident = [x for x in game.playerList if x.name == \"Brooks\"]", [])
+                runReader (compileIdentifier (N "Brooks") 1) ids `shouldBe` text "ident = [x for x in game.playerList if x.name == \"Brooks\"]"
             it "compiles A into a list containing all players with the specified affiliation" $
-                runReader (compileIdentifier (A "Test") 1) ids `shouldBe` (text "ident = [x for x in game.playerList if \"Test\" in x.affiliations]", [])
+                runReader (compileIdentifier (A "Test") 1) ids `shouldBe` text "ident = [x for x in game.playerList if \"Test\" in x.affiliations]"
             it "compiles Winner into a list containing the winning player or all players with the winning affiliation" $
-                runReader (compileIdentifier (Winner (CRef 0)) 1) ids `shouldBe` (text "ident = [x for x in game.playerList if x == game.compResults[-1][\"winner\"] or game.compResults[-1][\"winner\"] in x.affiliations]", [])
+                runReader (compileIdentifier (Winner (CRef 0)) 1) ids `shouldBe` text "ident = [x for x in game.playerList if x == game.compResults[-1][\"winner\"] or game.compResults[-1][\"winner\"] in x.affiliations]"
             it "compiles Loser into a list containing the losing player or all players with the losing affiliation" $
-                runReader (compileIdentifier (Loser (CRef 0)) 1) ids `shouldBe` (text "ident = [x for x in game.playerList if x == game.compResults[-1][\"loser\"] or game.compResults[-1][\"loser\"] in x.affiliations]", [])
+                runReader (compileIdentifier (Loser (CRef 0)) 1) ids `shouldBe` text "ident = [x for x in game.playerList if x == game.compResults[-1][\"loser\"] or game.compResults[-1][\"loser\"] in x.affiliations]"
             it "compiles Majority vote receiver with no tiebreaker into a list containing the majority vote receiver" $
-                runReader (compileIdentifier (Majority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(game.voteResults[-1], True)]", [])
+                runReader (compileIdentifier (Majority (VRef 0) Nothing) 1) ids `shouldBe` text "ident = [getVoteMinOrMax(game.voteResults[-1], True)]"
             it "compiles Majority vote receiver with a tiebreaker into a list containing the majority vote receiver" $
-                runReader (compileIdentifier (Majority (VRef 0) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(game.voteResults[-1], True, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
+                runReader (compileIdentifier (Majority (VRef 0) (Just (TieRef "rocks"))) 1) ids `shouldBe` text "ident = [getVoteMinOrMax(game.voteResults[-1], True, rocksTiebreaker)]"
             it "compiles Minority vote receiver with no tiebreaker into a list containing the minority vote receiver" $
-                runReader (compileIdentifier (Minority (VRef 0) Nothing) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(game.voteResults[-1], False)]", [])
+                runReader (compileIdentifier (Minority (VRef 0) Nothing) 1) ids `shouldBe` text "ident = [getVoteMinOrMax(game.voteResults[-1], False)]"
             it "compiles Minority vote receiver with a tiebreaker into a list containing the minority vote receiver" $
-                runReader (compileIdentifier (Minority (VRef 0) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "ident = [getVoteMinOrMax(game.voteResults[-1], False, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
+                runReader (compileIdentifier (Minority (VRef 0) (Just (TieRef "rocks"))) 1) ids `shouldBe` text "ident = [getVoteMinOrMax(game.voteResults[-1], False, rocksTiebreaker)]"
             it "compiles a Most with no tiebreaker into a list containing the player with the most of the counter" $
-                runReader (compileIdentifier (Most "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", True)]", [])
+                runReader (compileIdentifier (Most "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", True)]"
             it "compiles a Most with a tiebreaker into a list containing the player with the most of the counter" $
-                runReader (compileIdentifier (Most "votes" (IdList [] [Everyone]) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", True, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
+                runReader (compileIdentifier (Most "votes" (IdList [] [Everyone]) (Just (TieRef "rocks"))) 1) ids `shouldBe` text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", True, rocksTiebreaker)]"
             it "compiles a Least with no tiebreaker into a list containing the player with the most of the counter" $
-                runReader (compileIdentifier (Least "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", False)]", [])
+                runReader (compileIdentifier (Least "votes" (IdList [] [Everyone]) Nothing) 1) ids `shouldBe` text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", False)]"
             it "compiles a Least with a tiebreaker into a list containing the player with the least of the counter" $
-                runReader (compileIdentifier (Least "votes" (IdList [] [Everyone]) (Just (Tiebreak "rocks" Nothing Tied))) 1) ids `shouldBe` (text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", False, rocksTiebreaker)]", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
+                runReader (compileIdentifier (Least "votes" (IdList [] [Everyone]) (Just (TieRef "rocks"))) 1) ids `shouldBe` text "includeList2 = []\nexcludeList2 = []\nident = game.playerList\nexcludeList2 += ident\nidList2 = [x for x in includeList2 if x not in excludeList2]\nident = [getMinOrMax(idList2, \"votes\", False, rocksTiebreaker)]"
         describe "compileIdentifiers" $ do
             it "compiles an empty list of identifiers as an empty excludeList" $
-                runReader (compileIdentifiers [] 1) ids `shouldBe` (text "excludeList1 = []", [])
+                runReader (compileIdentifiers [] 1) ids `shouldBe` text "excludeList1 = []"
             it "compiles a multiple-element list of identifiers and appends each to excludeList" $
-                runReader (compileIdentifiers [N "Brooks", Everyone] 1) ids `shouldBe` (text "excludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nident = game.playerList\nexcludeList1 += ident", [])
+                runReader (compileIdentifiers [N "Brooks", Everyone] 1) ids `shouldBe` text "excludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nident = game.playerList\nexcludeList1 += ident"
         describe "compileIdVal" $ do
             it "compiles an IdentifierVal with Value Num 1 just by assigning the Identifier to idVal variable" $
-                runReader (compileIdVal (IdVal Everyone (Num 1)) 1) ids `shouldBe` (text "ident = game.playerList\nidVal = ident", [])
+                runReader (compileIdVal (IdVal Everyone (Num 1)) 1) ids `shouldBe` text "ident = game.playerList\nidVal = ident"
             it "compiles any other IdentifierVal by repeating each Identifier Value times" $
-                runReader (compileIdVal (IdVal Everyone (Num 2)) 1) ids `shouldBe` (text "ident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2", [])
+                runReader (compileIdVal (IdVal Everyone (Num 2)) 1) ids `shouldBe` text "ident = game.playerList\nidVal = []\nfor player in ident: idVal += [player] * 2"
         describe "compileIdVals" $ do
             it "compiles an empty list of IdentifierVals by assigning includeList to be empty" $
-                runReader (compileIdVals [] 1) ids `shouldBe` (text "includeList1 = []", [])
+                runReader (compileIdVals [] 1) ids `shouldBe` text "includeList1 = []"
             it "compiles a non-empty IdentifierVal list by appending each compiled IdentifierVal onto the includeList" $
-                runReader (compileIdVals [IdVal Everyone (Num 1), IdVal (N "Brooks") (Count "votes")] 1) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nidVal = []\nfor player in ident: idVal += [player] * player.counters[\"votes\"]\nincludeList1 += idVal", [])
+                runReader (compileIdVals [IdVal Everyone (Num 1), IdVal (N "Brooks") (Count "votes")] 1) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nidVal = []\nfor player in ident: idVal += [player] * player.counters[\"votes\"]\nincludeList1 += idVal"
         describe "compileIdentifierList" $ do
             it "compiles an IdentifierList by filtering the excludeList from the includeList" $
-                runReader (compileIdentifierList (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) 1) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]", [])
+                runReader (compileIdentifierList (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) 1) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]"
         describe "compileComp" $ do
             it "compiles a Scored Team Competition into a call to a python function to get the competition results" $
-                runReader (compileComp (Scored Team (IdList [IdVal Everyone (Num 1)] []))) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredTeamCompResults(list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations])))", [])
+                runReader (compileComp (Scored Team (IdList [IdVal Everyone (Num 1)] []))) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredTeamCompResults(list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations])))"
             it "compiles a Scored Individual Competition into a call to a python function to get the competition results" $
-                runReader (compileComp (Scored Individual (IdList [IdVal Everyone (Num 1)] []))) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)", [])
+                runReader (compileComp (Scored Individual (IdList [IdVal Everyone (Num 1)] []))) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)"
             it "compiles a Placed Team Competition into a call to a python function to get the competition results" $
-                runReader (compileComp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getTeamCompResults(list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations])), True, False)", [])
+                runReader (compileComp (Placed Team (IdList [IdVal Everyone (Num 1)] []) True False)) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getTeamCompResults(list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations])), True, False)"
             it "compiles a Placed Individual Competition into a call to a python function to get the competition results" $
-                runReader (compileComp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True False)) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getCompResults(idList1, True, False)", [])
+                runReader (compileComp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True False)) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getCompResults(idList1, True, False)"
         describe "compileDec" $ do
             it "compiles a Vote into a call to a python function to get the vote results" $
-                runReader (compileDec (Vote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False)) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoterList = idList1\nincludeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if \"Test\" in x.affiliations]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoteeList = idList1\ngame.vote(voterList, voteeList, False)", [])
+                runReader (compileDec (Vote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False)) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoterList = idList1\nincludeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if \"Test\" in x.affiliations]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoteeList = idList1\ngame.vote(voterList, voteeList, False)"
             it "compiles a Nomination into a call to a python function to get the nomination results and add the nomination affiliation to the nominated players" $
-                runReader (compileDec (Nomination 2 (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False)) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nnommerList = idList1\nincludeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if \"Test\" in x.affiliations]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\npoolList = idList1\ngame.nominate(nommerList, 2, poolList, False)", [])
+                runReader (compileDec (Nomination 2 (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False)) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nnommerList = idList1\nincludeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if \"Test\" in x.affiliations]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\npoolList = idList1\ngame.nominate(nommerList, 2, poolList, False)"
             it "compiles an Allocation into a call to a python function to get the allocation results and subtract the allocated amount from each player's counter" $
-                runReader (compileDec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [N "Brooks"]))) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.allocate(idList1, \"votes\")", [])
+                runReader (compileDec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [N "Brooks"]))) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.allocate(idList1, \"votes\")"
             it "compiles a DirectedVote into a call to a python function to get the vote results" $
-                runReader (compileDec (DirectedVote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False)) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoterList = idList1\nincludeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if \"Test\" in x.affiliations]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoteeList = idList1\ngame.directedVote(voterList, voteeList, False)", [])
+                runReader (compileDec (DirectedVote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False)) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoterList = idList1\nincludeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if \"Test\" in x.affiliations]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\nvoteeList = idList1\ngame.directedVote(voterList, voteeList, False)"
             it "compiles a Uses with no 'otherwise' phase list into a call to a python function to get the decision results and a conditional based on the result" $
-                runReader (compileDec (Uses (N "Brooks") [Act (Dec (Vote (IdList [] [Everyone]) (IdList [IdVal Everyone (Num 1)] []) False))] [])) ids `shouldBe` (text "ident = [x for x in game.playerList if x.name == \"Brooks\"]\nif uses(ident):\n    includeList1 = []\n    excludeList1 = []\n    ident = game.playerList\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voterList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voteeList = idList1\n    game.vote(voterList, voteeList, False)\n    game.voteResults = game.voteResults[0:len(game.voteResults)-1]", [])
+                runReader (compileDec (Uses (N "Brooks") [Act (Dec (Vote (IdList [] [Everyone]) (IdList [IdVal Everyone (Num 1)] []) False))] [])) ids `shouldBe` text "ident = [x for x in game.playerList if x.name == \"Brooks\"]\nif uses(ident):\n    includeList1 = []\n    excludeList1 = []\n    ident = game.playerList\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voterList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voteeList = idList1\n    game.vote(voterList, voteeList, False)\n    game.voteResults = game.voteResults[0:len(game.voteResults)-1]"
             it "compiles a Uses with an 'otherwise' phase list into a call to a python function to get the decision results and a conditional based on the result" $
-                runReader (compileDec (Uses (N "Brooks") [Act (Comp (Scored Individual (IdList [] [Everyone])))] [Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [])))])) ids `shouldBe` (text "ident = [x for x in game.playerList if x.name == \"Brooks\"]\nif uses(ident):\n    includeList1 = []\n    excludeList1 = []\n    ident = game.playerList\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)\n    game.compResults = game.compResults[0:len(game.compResults)-1]\nelse:\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.allocate(idList1, \"votes\")\n    game.allocateResults = game.allocateResults[0:len(game.allocateResults)-1]", [])
+                runReader (compileDec (Uses (N "Brooks") [Act (Comp (Scored Individual (IdList [] [Everyone])))] [Act (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [])))])) ids `shouldBe` text "ident = [x for x in game.playerList if x.name == \"Brooks\"]\nif uses(ident):\n    includeList1 = []\n    excludeList1 = []\n    ident = game.playerList\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)\n    game.compResults = game.compResults[0:len(game.compResults)-1]\nelse:\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.allocate(idList1, \"votes\")\n    game.allocateResults = game.allocateResults[0:len(game.allocateResults)-1]"
         describe "compileAction" $ do
             it "compiles a competition" $
-                runReader (compileAction (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] [])))) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)", [])
+                runReader (compileAction (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] [])))) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)"
             it "compiles a decision" $
-                runReader (compileAction (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [N "Brooks"])))) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.allocate(idList1, \"votes\")", [])
+                runReader (compileAction (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [N "Brooks"])))) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nident = [x for x in game.playerList if x.name == \"Brooks\"]\nexcludeList1 += ident\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.allocate(idList1, \"votes\")"
         describe "compileTiebreaker" $ do
             it "compiles a Tiebreaker with no action into a function name and definition" $
-                runReader (compileTiebreaker (Tiebreak "rocks" Nothing Tied) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"])
+                runReader (compileTiebreaker (Tiebreak "Rocks" Nothing Tied) 1) ids `shouldBe` text "def rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]"
             it "compiles a Tiebreaker with an action into a function name and definition" $
-                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (Nomination 2 (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False))) Nominated) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    nommerList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if \"Test\" in x.affiliations]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    poolList = idList1\n    game.nominate(nommerList, 2, poolList, False)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    return ident[0]"])
+                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (Nomination 2 (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False))) Nominated) 1) ids `shouldBe` text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    nommerList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if \"Test\" in x.affiliations]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    poolList = idList1\n    game.nominate(nommerList, 2, poolList, False)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    return ident[0]"
             it "compiles a Tiebreaker with an action into a function name and definition and deletes result if action was a Vote" $
-                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (Vote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False))) Nominated) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voterList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if \"Test\" in x.affiliations]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voteeList = idList1\n    game.vote(voterList, voteeList, False)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.voteResults[-1]\n    return ident[0]"])
+                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (Vote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False))) Nominated) 1) ids `shouldBe` text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voterList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if \"Test\" in x.affiliations]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voteeList = idList1\n    game.vote(voterList, voteeList, False)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.voteResults[-1]\n    return ident[0]"
             it "compiles a Tiebreaker with an action into a function name and definition and deletes result if action was a DirectedVote" $
-                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (DirectedVote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False))) Nominated) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voterList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if \"Test\" in x.affiliations]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voteeList = idList1\n    game.directedVote(voterList, voteeList, False)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.voteResults[-1]\n    return ident[0]"])
+                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (DirectedVote (IdList [IdVal Everyone (Num 1)] [N "Brooks"]) (IdList [IdVal Everyone (Num 1)] [A "Test"]) False))) Nominated) 1) ids `shouldBe` text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voterList = idList1\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if \"Test\" in x.affiliations]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    voteeList = idList1\n    game.directedVote(voterList, voteeList, False)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.voteResults[-1]\n    return ident[0]"
             it "compiles a Tiebreaker with an action into a function name and definition and deletes result if action was an Allocation" $
-                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [N "Brooks"])))) Nominated) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.allocate(idList1, \"votes\")\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.allocateResults[-1]\n    return ident[0]"])
+                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Dec (Allocation "votes" (IdList [IdVal Everyone (Num 1)] [N "Brooks"])))) Nominated) 1) ids `shouldBe` text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    ident = [x for x in game.playerList if x.name == \"Brooks\"]\n    excludeList1 += ident\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.allocate(idList1, \"votes\")\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.allocateResults[-1]\n    return ident[0]"
             it "compiles a Tiebreaker with an action into a function name and definition and deletes result if action was a Competition" $
-                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] [])))) Nominated) 1) ids `shouldBe` (text "rocksTiebreaker", [text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.compResults[-1]\n    return ident[0]"])
+                runReader (compileTiebreaker (Tiebreak "rocks" (Just (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] [])))) Nominated) 1) ids `shouldBe` text "def rocksTiebreaker(tied):\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getScoredCompResults(idList1)\n    ident = [x for x in game.playerList if \"nominee\" in x.affiliations]\n    del game.compResults[-1]\n    return ident[0]"
+        describe "compileTiebreakerRef" $ do
+            it "compiles a TiebreakerRef into the name of the function that performs the tiebreaker" $
+                compileTiebreakerRef (TieRef "Rocks") `shouldBe` text "rocksTiebreaker"
         describe "compileNameList" $ do
             it "compiles an empty list of names" $
                 compileNameList [] `shouldBe` text "[]"
@@ -726,14 +737,14 @@ main = hspec $ do
                 runReader (compileCounterUpdate (Set "votes" (Num 0))) ids `shouldBe` text "for player in idList1: player.setCounter(0, \"votes\")"
         describe "compileProgression" $ do
             it "compiles an AU Progression" $
-                runReader (compileProgression (AU Elimination (IdList [] []))) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)", [])
+                runReader (compileProgression (AU Elimination (IdList [] []))) ids `shouldBe` text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)"
             it "compiles a CU Progression" $
-                runReader (compileProgression (CU (Increase "votes" (Num 1)) (IdList [] []))) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nfor player in idList1: player.updateCounter(1, \"votes\")", [])
+                runReader (compileProgression (CU (Increase "votes" (Num 1)) (IdList [] []))) ids `shouldBe` text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nfor player in idList1: player.updateCounter(1, \"votes\")"
         describe "compilePhaseList" $ do
             it "compiles an empty phase list" $ do
-                runReader (compilePhaseList []) ids `shouldBe` (empty, [])
+                runReader (compilePhaseList []) ids `shouldBe` empty
             it "compiles a non-empty phase list" $ do
-                runReader (compilePhaseList [Act (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [] []))]) ids `shouldBe` (text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)\nincludeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)", [])
+                runReader (compilePhaseList [Act (Comp (Scored Individual (IdList [IdVal Everyone (Num 1)] []))), Prog (AU Elimination (IdList [] []))]) ids `shouldBe` text "includeList1 = []\nident = game.playerList\nidVal = ident\nincludeList1 += idVal\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.getScoredCompResults(idList1)\nincludeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\ngame.eliminate(idList1)"
         describe "countCompsInPhaseList" $ do
             it "counts the number of competitions in a phase list" $ do
                 countCompsInPhaseList [Act (Comp (Scored Team (IdList [] []))), Prog (AU Elimination (IdList [] [])), Act (Dec (Vote (IdList [] []) (IdList [] []) False)), Act (Dec (Allocation "votes" (IdList [] []))), Act (Comp (Placed Individual (IdList [] []) False True)), Act (Dec (Nomination 2 (IdList [] []) (IdList [] []) True)), Act (Dec (DirectedVote (IdList [] []) (IdList [] []) True))] `shouldBe` 2
@@ -759,21 +770,21 @@ main = hspec $ do
                 runReader (compileGoalList [Gl 30 "votes", Gl 100 "points"]) ids `shouldBe` text "player.checkWinCondition(\"votes\", 30) and player.checkWinCondition(\"points\", 100)"
         describe "compileWinCondition" $ do
             it "compiles a Survive Win Condition" $
-                runReader (compileWinCondition Survive) ids `shouldBe` (text "winners = \"\"\nif len(game.playerList) == 1:\n    winners = game.playerList[0].name\nelse:\n    for player in game.playerList[1:]:\n        winners += player.name + \", \"\n    winners += \"and \" + game.playerList[0].name\nprint(winners + \" won!\")", [])
+                runReader (compileWinCondition Survive) ids `shouldBe` text "winners = \"\"\nif len(game.playerList) == 1:\n    winners = game.playerList[0].name\nelse:\n    for player in game.playerList[1:]:\n        winners += player.name + \", \"\n    winners += \"and \" + game.playerList[0].name\nprint(winners + \" won!\")"
             it "compiles a Jury Win Condition" $
-                runReader (compileWinCondition (Jury 7)) ids `shouldBe` (text "game.juryVote(7)\nwinner = getVoteMinOrMax(game.voteResults[-1], True)\nprint(winner.name + \" won!\")", [])
+                runReader (compileWinCondition (Jury 7)) ids `shouldBe` text "game.juryVote(7)\nwinner = getVoteMinOrMax(game.voteResults[-1], True)\nprint(winner.name + \" won!\")"
             it "compiles a FinalComp Team Win Condition" $
-                runReader (compileWinCondition (FinalComp Team)) ids `shouldBe` (text "game.getTeamCompResults(game.teamList, True, False)\nwinner = game.compResults[-1][\"winner\"]\nprint(winner + \" won!\")", [])
+                runReader (compileWinCondition (FinalComp Team)) ids `shouldBe` text "game.getTeamCompResults(game.teamList, True, False)\nwinner = game.compResults[-1][\"winner\"]\nprint(winner + \" won!\")"
             it "compiles a FinalComp Individual Win Condition" $
-                runReader (compileWinCondition (FinalComp Individual)) ids `shouldBe` (text "game.getCompResults(game.playerList, True, False)\nwinner = game.compResults[-1][\"winner\"]\nprint(winner.name + \" won!\")", [])
+                runReader (compileWinCondition (FinalComp Individual)) ids `shouldBe` text "game.getCompResults(game.playerList, True, False)\nwinner = game.compResults[-1][\"winner\"]\nprint(winner.name + \" won!\")"
             it "compiles a Reach Individual Win Condition" $
-                runReader (compileWinCondition (Reach [Gl 4 "points"] Individual)) ids `shouldBe` (text "    winners = []\n    for player in game.playerList:\n        if player.checkWinCondition(\"points\", 4):\n            winners.append(player.name)\n    if len(winners) > 0:\n        winnerString = \"\"\n        if len(winners) == 1:\n            winnerString = winners[0]\n        else:\n            for winner in winners[1:]:\n                winnerString += winner + \", \"\n            winnerString += \"and \" + winners[0]\n        print(winnerString + \" won!\")\n        break", [])
+                runReader (compileWinCondition (Reach [Gl 4 "points"] Individual)) ids `shouldBe` text "    winners = []\n    for player in game.playerList:\n        if player.checkWinCondition(\"points\", 4):\n            winners.append(player.name)\n    if len(winners) > 0:\n        winnerString = \"\"\n        if len(winners) == 1:\n            winnerString = winners[0]\n        else:\n            for winner in winners[1:]:\n                winnerString += winner + \", \"\n            winnerString += \"and \" + winners[0]\n        print(winnerString + \" won!\")\n        break"
             it "compiles a Reach Team Win Condition" $
-                runReader (compileWinCondition (Reach [Gl 4 "points"] Team)) ids `shouldBe` (text "    winners = []\n    for player in game.playerList:\n        if player.checkWinCondition(\"points\", 4):\n            winners.append(player)\n    if len(winners) > 0:\n        winTeams = list(dict.fromkeys([x for x in game.teamList for y in winners if x in y.affiliations]))\n        winnerString = \"\"\n        if len(winTeams) == 1:\n            winnerString = winTeams[0]\n        else:\n            for winner in winTeams[1:]:\n                winnerString += winner + \", \"\n            winnerString += \"and \" + winTeams[0]\n        print(winnerString + \" won!\")\n        break", [])
+                runReader (compileWinCondition (Reach [Gl 4 "points"] Team)) ids `shouldBe` text "    winners = []\n    for player in game.playerList:\n        if player.checkWinCondition(\"points\", 4):\n            winners.append(player)\n    if len(winners) > 0:\n        winTeams = list(dict.fromkeys([x for x in game.teamList for y in winners if x in y.affiliations]))\n        winnerString = \"\"\n        if len(winTeams) == 1:\n            winnerString = winTeams[0]\n        else:\n            for winner in winTeams[1:]:\n                winnerString += winner + \", \"\n            winnerString += \"and \" + winTeams[0]\n        print(winnerString + \" won!\")\n        break"
             it "compiles an Ids Individual Win Condition" $
-                runReader (compileWinCondition (Ids (IdList [] []) Individual)) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nwinners = \"\"\nif len(idList1) == 0: print(\"No winners!\")\nelif len(idList1) == 1:\n    winners = idList1[0].name\nelse:\n    for winner in idList1[1:]:\n        winners += winner.name + \", \"\n    winners += \"and \" + idList1[0].name\nprint(winners + \" won!\")", [])
+                runReader (compileWinCondition (Ids (IdList [] []) Individual)) ids `shouldBe` text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nwinners = \"\"\nif len(idList1) == 0: print(\"No winners!\")\nelif len(idList1) == 1:\n    winners = idList1[0].name\nelse:\n    for winner in idList1[1:]:\n        winners += winner.name + \", \"\n    winners += \"and \" + idList1[0].name\nprint(winners + \" won!\")"
             it "compiles an Ids Team Win Condition" $
-                runReader (compileWinCondition (Ids (IdList [] []) Team)) ids `shouldBe` (text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nwinTeams = list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations]))\nwinners = \"\"\nif len(winTeams) == 0: print(\"No winners!\")\nelif len(winTeams) == 1:\n    winners = winTeams[0]\nelse:\n    for winner in winTeams[1:]:\n        winners += winner + \", \"\n    winners += \"and \" + winTeams[0]\nprint(winners + \" won!\")", [])
+                runReader (compileWinCondition (Ids (IdList [] []) Team)) ids `shouldBe` text "includeList1 = []\nexcludeList1 = []\nidList1 = [x for x in includeList1 if x not in excludeList1]\nwinTeams = list(dict.fromkeys([x for x in game.teamList for y in idList1 if x in y.affiliations]))\nwinners = \"\"\nif len(winTeams) == 0: print(\"No winners!\")\nelif len(winTeams) == 1:\n    winners = winTeams[0]\nelse:\n    for winner in winTeams[1:]:\n        winners += winner + \", \"\n    winners += \"and \" + winTeams[0]\nprint(winners + \" won!\")"
         describe "getCountersFromAttList" $ do
             it "gets no counter names from an empty attribute list" $ 
                 getCountersFromAttList [] `shouldBe` []
@@ -786,7 +797,9 @@ main = hspec $ do
                 getCountersFromPlayerList [P "Brooks" [Affiliation "Great", Counter "votes" (Just 20) (Just 0) Nothing], P "Mac" [Affiliation "Test", Counter "points" Nothing Nothing Nothing]] `shouldBe` ["votes", "points"]
         describe "getAllCounters" $
             it "gets all counter names from a Game" $
-                getAllCounters (G (PI [P "Brooks" [Affiliation "Great", Counter "votes" (Just 20) (Just 0) Nothing], P "Mac" [Affiliation "Test", Counter "points" Nothing Nothing Nothing]] ["Test", "Great"] False) [] Survive) `shouldBe` ["votes", "points"]
-        describe "compileGame" $
-            it "compiles a complete Game" $
-                compileGame (G (PI [P "Brooks" [Affiliation "Great", Counter "votes" (Just 20) (Just 0) Nothing], P "Mac" [Affiliation "Test", Counter "points" Nothing Nothing Nothing]] ["Test", "Great"] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True False)), Prog (CU (Increase "points" (Num 1)) (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))] 5 []] (Jury 7)) `shouldBe` text "from gamelib import *\n\ndef roundType1():\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getCompResults(idList1, True, False)\n    includeList1 = []\n    ident = [x for x in game.playerList if x == game.compResults[-1][\"winner\"] or game.compResults[-1][\"winner\"] in x.affiliations]\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    for player in idList1: player.updateCounter(1, \"points\")\n\ngame = Game()\n\ngame.playerList.append(Player(\"Brooks\", [\"Great\"], [{\"counter\": \"votes\", \"starts\": 20, \"min\": 0}]))\ngame.playerList.append(Player(\"Mac\", [\"Test\"], [{\"counter\": \"points\"}]))\ngame.teamList.append(\"Test\")\ngame.teamList.append(\"Great\")\n\nroundList = [roundType1] * 5\n\nfor round in roundList:\n    game.resetResults()\n    round()\n\ngame.juryVote(7)\nwinner = getVoteMinOrMax(game.voteResults[-1], True)\nprint(winner.name + \" won!\")"
+                getAllCounters (G (PI [P "Brooks" [Affiliation "Great", Counter "votes" (Just 20) (Just 0) Nothing], P "Mac" [Affiliation "Test", Counter "points" Nothing Nothing Nothing]] ["Test", "Great"] False) [] Survive []) `shouldBe` ["votes", "points"]
+        describe "compileGame" $ do
+            it "compiles a complete Game with no Tiebreakers" $
+                compileGame (G (PI [P "Brooks" [Affiliation "Great", Counter "votes" (Just 20) (Just 0) Nothing], P "Mac" [Affiliation "Test", Counter "points" Nothing Nothing Nothing]] ["Test", "Great"] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True False)), Prog (CU (Increase "points" (Num 1)) (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))] 5 []] (Jury 7) []) `shouldBe` text "from gamelib import *\n\ndef roundType1():\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getCompResults(idList1, True, False)\n    includeList1 = []\n    ident = [x for x in game.playerList if x == game.compResults[-1][\"winner\"] or game.compResults[-1][\"winner\"] in x.affiliations]\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    for player in idList1: player.updateCounter(1, \"points\")\n\ngame = Game()\n\ngame.playerList.append(Player(\"Brooks\", [\"Great\"], [{\"counter\": \"votes\", \"starts\": 20, \"min\": 0}]))\ngame.playerList.append(Player(\"Mac\", [\"Test\"], [{\"counter\": \"points\"}]))\ngame.teamList.append(\"Test\")\ngame.teamList.append(\"Great\")\n\nroundList = [roundType1] * 5\n\nfor round in roundList:\n    game.resetResults()\n    round()\n\ngame.juryVote(7)\nwinner = getVoteMinOrMax(game.voteResults[-1], True)\nprint(winner.name + \" won!\")"
+            it "compiles a complete Game with a Tiebreaker" $
+                compileGame (G (PI [P "Brooks" [Affiliation "Great", Counter "votes" (Just 20) (Just 0) Nothing], P "Mac" [Affiliation "Test", Counter "points" Nothing Nothing Nothing]] ["Test", "Great"] False) [R [Act (Comp (Placed Individual (IdList [IdVal Everyone (Num 1)] []) True False)), Prog (CU (Increase "points" (Num 1)) (IdList [IdVal (Winner (CRef 0)) (Num 1)] []))] 5 []] (Jury 7) [Tiebreak "rocks" Nothing Tied]) `shouldBe` text "from gamelib import *\n\ndef roundType1():\n    includeList1 = []\n    ident = game.playerList\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    game.getCompResults(idList1, True, False)\n    includeList1 = []\n    ident = [x for x in game.playerList if x == game.compResults[-1][\"winner\"] or game.compResults[-1][\"winner\"] in x.affiliations]\n    idVal = ident\n    includeList1 += idVal\n    excludeList1 = []\n    idList1 = [x for x in includeList1 if x not in excludeList1]\n    for player in idList1: player.updateCounter(1, \"points\")\n\ndef rocksTiebreaker(tied):\n    ident = tied\n    return ident[0]\n\ngame = Game()\n\ngame.playerList.append(Player(\"Brooks\", [\"Great\"], [{\"counter\": \"votes\", \"starts\": 20, \"min\": 0}]))\ngame.playerList.append(Player(\"Mac\", [\"Test\"], [{\"counter\": \"points\"}]))\ngame.teamList.append(\"Test\")\ngame.teamList.append(\"Great\")\n\nroundList = [roundType1] * 5\n\nfor round in roundList:\n    game.resetResults()\n    round()\n\ngame.juryVote(7)\nwinner = getVoteMinOrMax(game.voteResults[-1], True)\nprint(winner.name + \" won!\")"

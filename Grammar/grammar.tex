@@ -11,7 +11,7 @@
 \noindent \textbf{Pretty-printed EBNF grammar:}
 \begin{grammar}
 <game> ::= `Players:' <teamList> `Rounds:' <roundList> `Win:' 
-<winCondition>
+<winCondition> \{<tiebreaker>\}
 
 <teamList> ::= (<team> \{`;' <team>\} | <playerList> | `randomly divide' 
 <playerList> `into' <nameList>) [`all with' <attributeList>]
@@ -29,10 +29,10 @@
 <name> [`starting at' <number>] [`with minimum of' <number>] [`with maximum of' 
 <number>]
 
-<roundList> ::= <round> `;' \{<round>\}
+<roundList> ::= <round> \{<round>\}
 
 <round> ::= <phaseList> [`repeated' <number> `times' [`with modifications' `:' 
-<modifierList>]]
+<modifierList>]] `;'
 
 <modifierList> ::= <modifier> `.' \{<modifier>\}
 
@@ -88,8 +88,8 @@
 | 
 `tied' | 
 `eliminated' | (`winner' | `loser') `of' <compReference> | (`majority' | 
-`minority') `of' <voteReference>  [<tiebreaker>] | (`highest' | `lowest' | 
-`most' | `least') <name> `(' <identifierList> `)' [<tiebreaker>]
+`minority') `of' <voteReference>  [<tiebreakerReference>] | (`highest' | `lowest' | 
+`most' | `least') <name> `(' <identifierList> `)' [<tiebreakerReference>]
 
 <compReference> ::= `competition' [<number>] 
 
@@ -97,7 +97,9 @@
 
 <voteReference> ::= `vote' [<number>]
 
-<tiebreaker> ::= `tiebroken by' <name> `:' [<action>] <identifier>
+<tiebreaker> ::= `Tiebreaker:' <name> [<action>] <identifier>
+
+<tiebreakerReference> ::= `tiebroken by' <name>
 
 <name> ::= (`a' | ... | `z' | `A' | ... | `Z') \{`a' | ... | `z' | `A' | ... | 
 `Z' | `0' | ... | `9'\}
@@ -115,4 +117,10 @@
 <goalList> ::= <goal> \{`,' <goal>\}
 
 \end{grammar}
+
+TODO:
+\begin{itemize}
+  \item Either add a tiebreaker reference to the "winner/loser of competition" identifier, specifically for scored competitions (since they could tie), or add the possibility of multiple actions in a tiebreaker, so that the results of a scored competition could increment a counter, which can then be used in an identifier with a tiebreaker. Probably both of these should be done.
+  \item comments
+\end{itemize}
 \end{document}

@@ -7,4 +7,8 @@ increase points by results of competition for everyone
 repeated 9 times;
 
 Win:
-highest points for team
+highest points tiebroken by ExtraInning for team
+
+Tiebreaker: ExtraInning
+team competition between Jays, Yankees
+winner of competition
