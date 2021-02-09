@@ -188,9 +188,9 @@ spec = do
     it "parses a directed vote decision" $
       parseGame decision "directed vote by everyone between everyone" `shouldBe` DirectedVote (IdList [IdVal Everyone (Num 1)] []) (IdList [IdVal Everyone (Num 1)] []) False
     it "parses a uses decision with no otherwise specified" $
-      parseGame decision "uses? Brooks then (vote by Brooks between nominated)" `shouldBe` Uses (N "Brooks") [Act (Dec (Vote (IdList [IdVal (N "Brooks") (Num 1)] []) (IdList [IdVal (Nominated) (Num 1)] []) False))] []
+      parseGame decision "uses? Brooks then (vote by Brooks between nominated)" `shouldBe` Uses (N "Brooks") [Act (Dec (Vote (IdList [IdVal (N "Brooks") (Num 1)] []) (IdList [IdVal Nominated (Num 1)] []) False))] []
     it "parses a uses decision with an otherwise" $
-      parseGame decision "uses? Brooks then (vote by Brooks between nominated) otherwise (elimination of Test)" `shouldBe` Uses (N "Brooks") [Act (Dec (Vote (IdList [IdVal (N "Brooks") (Num 1)] []) (IdList [IdVal (Nominated) (Num 1)] []) False))] [Prog (AU (Elimination) (IdList [IdVal (N "Test") (Num 1)] []))]
+      parseGame decision "uses? Brooks then (vote by Brooks between nominated) otherwise (elimination of Test)" `shouldBe` Uses (N "Brooks") [Act (Dec (Vote (IdList [IdVal (N "Brooks") (Num 1)] []) (IdList [IdVal Nominated (Num 1)] []) False))] [Prog (AU Elimination (IdList [IdVal (N "Test") (Num 1)] []))]
   describe "action" $ do
     it "parses a competition" $
       parseGame action "competition between everyone" `shouldBe`

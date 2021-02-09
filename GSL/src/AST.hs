@@ -150,19 +150,19 @@ data Value
 data ActRef = Cmp CompRef | Vt VoteRef | Alloc AllocRef deriving (Show, Eq)
 
 -- | A competition is referenced by a number for when it occured
-data CompRef = CRef Number deriving (Show, Eq)
+newtype CompRef = CRef Number deriving (Show, Eq)
 
 -- | A vote is referenced by a number for when it occured
-data VoteRef = VRef Number deriving (Show, Eq)
+newtype VoteRef = VRef Number deriving (Show, Eq)
 
 -- | An allocation is referenced by a number for when it occured
-data AllocRef = ARef Number deriving (Show, Eq)
+newtype AllocRef = ARef Number deriving (Show, Eq)
 
 -- | A tiebreaker is named and might include an action before choosing an identifier to resolve a tie
 data Tiebreaker = Tiebreak Name (Maybe Action) Identifier deriving (Show, Eq)
 
 -- | A tiebreaker is referenced by its name
-data TiebreakerRef = TieRef Name deriving (Show, Eq)
+newtype TiebreakerRef = TieRef Name deriving (Show, Eq)
 
 -- | A goal is a number and the name of a counter for which the number must be reached
 data Goal = Gl Number Name deriving (Show, Eq)
