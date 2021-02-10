@@ -53,7 +53,7 @@ compileGame g@(G pi rl wc tbs) = vcat (intersperse (text "") [
     fst rldoc,
     runRounds,
     wcdoc])
-    where tbdoc = runReader (mapM (`compileTiebreaker` 1) tbs) ids
+    where tbdoc = runReader (mapM compileTiebreaker tbs) ids
           rldoc = runReader (compileRoundList rl) ids
           pidoc = compilePlayerInfo pi
           wcdoc = runReader (compileWinCondition wc) ids
@@ -448,17 +448,15 @@ compileIdentifier (Least nm il (Just tb)) n = do
         then return $ vcat [ildoc, text "ident =" <+> brackets (text "getMinOrMax" <> parens (text "idList" <> integer (n+1) <> comma <+> doubleQuotes (text nm) <> comma <+> text "False" <> comma <+> tbdoc))]
         else error ("Reference to non-existent counter " ++ nm)
 
--- TODO: Is integer argument below really necessary?
-
--- | Compiles a Tiebreaker into python code for the definition of that function. The integer input represents the level of nesting, needed to generate unique variable names.
-compileTiebreaker :: Tiebreaker -> Integer -> Reader IdNames Doc
-compileTiebreaker (Tiebreak (firstletter:nm) Nothing id) n = do
-    iddoc <- compileIdentifier id n
+-- | Compiles a Tiebreaker into python code for the definition of that function.
+compileTiebreaker :: Tiebreaker -> Reader IdNames Doc
+compileTiebreaker (Tiebreak (firstletter:nm) Nothing id) = do
+    iddoc <- compileIdentifier id 1
     return $ vcat [text "def" <+> text (toLower firstletter:nm) <> 
       text "Tiebreaker" <> parens (text "tied") <> colon, nest 4 iddoc, 
       nest 4 (text "return ident[0]")]
-compileTiebreaker (Tiebreak (firstletter:nm) (Just a) id) n = do
-    iddoc <- compileIdentifier id n
+compileTiebreaker (Tiebreak (firstletter:nm) (Just a) id) = do
+    iddoc <- compileIdentifier id 1
     adoc <- compileAction a
     return $ vcat [text "def" <+> text (toLower firstletter:nm) <> text 
       "Tiebreaker" <> parens (text "tied") <> colon, nest 4 adoc, nest 4 iddoc, 
@@ -470,7 +468,7 @@ compileTiebreaker (Tiebreak (firstletter:nm) (Just a) id) n = do
           delResultIfNeeded (Dec (Allocation _ _)) = text 
             "del game.allocateResults[-1]"
           delResultIfNeeded ac = empty
-compileTiebreaker _ _ = error "Tiebreaker must have a name"
+compileTiebreaker _ = error "Tiebreaker must have a name"
 
 -- | Compiles a TiebreakerRef into python code for the name of the function that performs the tiebreaker.
 compileTiebreakerRef :: TiebreakerRef -> Doc
